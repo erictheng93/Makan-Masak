@@ -7,7 +7,7 @@
     <span>{{ t("billing.trialExpiredBanner") }}</span>
     <div class="flex shrink-0 items-center gap-2">
       <router-link
-        :to="{ name: 'Billing' }"
+        :to="{ name: 'Billing', hash: '#plans' }"
         class="rounded-full bg-ios-orange px-4 py-1.5 font-medium text-white"
       >
         {{ t("billing.trialExpiredAction") }}

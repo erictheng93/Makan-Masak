@@ -23,7 +23,7 @@
           {{ t("billing.trialExpiredContinue") }}
         </button>
         <router-link
-          :to="{ name: 'Billing' }"
+          :to="{ name: 'Billing', hash: '#plans' }"
           class="rounded-full bg-ios-blue px-5 py-3 text-center text-sm font-semibold text-white"
           data-testid="trial-expired-modal-action"
           @click="dialogRef?.close()"

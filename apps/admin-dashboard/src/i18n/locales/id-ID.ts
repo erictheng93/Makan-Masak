@@ -1011,6 +1011,12 @@ const idID: Messages = {
     loadFailed: "Gagal memuat",
     saveFailed: "Gagal menyimpan",
     deleteFailed: "Gagal menghapus",
+    quota: {
+      orders: "Batas pesanan periode ini tercapai",
+      print: "Batas cetak periode ini tercapai",
+      ai: "Batas permintaan AI periode ini tercapai",
+      generic: "Batas penggunaan periode ini tercapai",
+    },
     subscription: {
       moduleNotEnabled:
         "Fitur ini tidak termasuk dalam paket Anda saat ini. Tingkatkan paket Anda atau hubungi dukungan untuk mengaktifkannya.",
@@ -6542,26 +6548,16 @@ const idID: Messages = {
     trialExpiredAction: "Pilih paket",
     trialExpiredTitle: "Masa uji coba telah berakhir",
     trialExpiredContinue: "Lanjutkan",
-    upgradeTitle: "Tingkatkan paket",
-    upgradeBody:
-      "Pembayaran online belum tersedia. Kirim email kepada kami dan kami akan menyiapkan paket Anda. Sementara itu semua fitur tetap berfungsi.",
-    upgradeAction: "Kirim email untuk upgrade",
-    upgradeMailSubject: "Upgrade paket MakanMasak",
     usageTitle: "Pemakaian siklus ini",
     usageEmpty: "Belum ada pemakaian tercatat pada siklus ini.",
     modulesTitle: "Fitur yang termasuk",
     moduleOn: "Aktif",
     moduleOff: "Nonaktif",
-    changePlanTitle: "Perlu ganti paket?",
-    changePlanHint:
-      "Perubahan paket ditangani tim platform. Ajukan tiket dukungan dan kami akan menghubungi Anda.",
-    changePlanCta: "Ajukan tiket dukungan",
     loadFailed: "Gagal memuat informasi langganan. Silakan coba lagi.",
     tier: {
       trial: "Uji coba",
-      basic: "Dasar",
-      standard: "Standar",
-      premium: "Premium",
+      basic: "Standar",
+      pro: "Profesional",
       enterprise: "Enterprise",
     },
     meter: {
@@ -6570,6 +6566,99 @@ const idID: Messages = {
       print_jobs: "Tugas cetak",
       ai_requests: "Permintaan AI",
       storage_bytes: "Penyimpanan (byte)",
+    },
+    quota: {
+      viewPlans: "Lihat paket",
+      warning: {
+        orders: "{pct}% pesanan periode ini telah terpakai ({used}/{limit})",
+        print: "{pct}% cetak periode ini telah terpakai ({used}/{limit})",
+        ai: "{pct}% permintaan AI periode ini telah terpakai ({used}/{limit})",
+      },
+      over: {
+        orders:
+          "Batas pesanan tercapai: pelanggan saat ini tidak dapat memesan",
+        print:
+          "Batas cetak tercapai: struk dan tiket saat ini tidak dapat dicetak",
+        ai: "Batas permintaan AI tercapai: fitur AI sementara tidak tersedia",
+      },
+    },
+    plans: {
+      title: "Pilih paket",
+      hint: "Paket dapat diubah kapan saja tanpa pembayaran online. Upgrade berlaku segera; downgrade berlaku di akhir periode berjalan dan dapat dibatalkan sebelum itu.",
+      guide: "Panduan paket dan penggunaan",
+      loadFailed: "Informasi paket tidak dapat dimuat. Coba lagi nanti.",
+      unlimited: "Tanpa batas",
+      upgradeNow: "Upgrade sekarang",
+      downgradeNow: "Downgrade sekarang",
+      scheduleDowngrade: "Jadwalkan downgrade, berlaku {date}",
+      unavailable: "Tidak tersedia",
+      unavailableRegion: "Paket ini belum tersedia di wilayah Anda.",
+      unavailableTrial:
+        "Uji coba hanya untuk toko baru dan tidak dapat dipakai kembali.",
+      changed: "Paket diubah menjadi {plan}",
+      scheduled: "Downgrade ke {plan} telah dijadwalkan",
+      limit: {
+        orders: "Pesanan per periode",
+        print: "Cetak per periode",
+        ai: "Permintaan AI per periode",
+        storage: "Penyimpanan",
+      },
+    },
+    pending: {
+      scheduled: "Downgrade ke {plan} dijadwalkan pada {date}",
+      waitingShift:
+        "Downgrade ke {plan} telah dijadwalkan, tetapi masih menunggu shift kasir yang terbuka ditutup.",
+      cancel: "Batalkan downgrade",
+      cancelTitle: "Batalkan downgrade yang dijadwalkan?",
+      cancelMessage: "Anda akan tetap menggunakan paket saat ini.",
+      cancelled: "Downgrade dibatalkan",
+      badge: "Dijadwalkan berlaku {date}",
+    },
+    confirm: {
+      title: "Ganti ke {plan}",
+      effectiveNow: "Berlaku segera.",
+      effectiveCycleEnd:
+        "Berlaku di akhir periode ini ({date}); sampai saat itu fitur paket saat ini tetap tersedia.",
+      trialNoReturn:
+        "Setelah keluar dari uji coba, Anda tidak dapat kembali ke uji coba.",
+      gained: "Fitur yang Anda dapatkan",
+      lost: "Fitur yang akan hilang",
+      blocking: "Selesaikan ini dahulu",
+      impact: "Yang akan berubah",
+      goToPos: "Buka POS untuk menutup shift",
+      confirmUpgrade: "Konfirmasi upgrade",
+      confirmDowngrade: "Konfirmasi downgrade",
+    },
+    impact: {
+      open_cash_shift:
+        "Masih ada {count} shift kasir yang terbuka: tutup di POS sebelum downgrade",
+      future_reservations:
+        "{count} reservasi mendatang tidak akan dapat dilihat lagi di dasbor",
+      future_service_bookings:
+        "{count} pemesanan layanan mendatang tidak akan dapat dilihat lagi di dasbor",
+      active_coupons: "{count} kupon aktif akan berhenti berlaku",
+      scheduled_shifts:
+        "{count} shift terjadwal tidak akan dapat dilihat lagi di dasbor",
+      pending_leave_requests:
+        "{count} pengajuan cuti yang menunggu tidak dapat diproses lagi",
+      tracked_ingredients: "Stok {count} bahan tidak akan dilacak lagi",
+      connected_platforms:
+        "{count} platform pengiriman yang terhubung akan diputus",
+      usage_over_new_limit:
+        "{count} meter penggunaan periode ini sudah melebihi batas paket baru",
+    },
+    errors: {
+      unchanged: "Anda sudah menggunakan paket ini.",
+      trialNotReenterable: "Tidak dapat kembali ke uji coba.",
+      notInRegion: "Paket ini belum tersedia di wilayah Anda.",
+      inactive:
+        "Langganan sedang nonaktif sehingga paket tidak dapat diubah. Hubungi dukungan.",
+      openShift:
+        "Masih ada shift kasir yang terbuka. Tutup di POS sebelum downgrade.",
+      conflict:
+        "Paket baru saja diubah oleh orang lain. Halaman sudah dimuat ulang; periksa lalu coba lagi.",
+      noPending:
+        "Tidak ada lagi downgrade yang dijadwalkan. Halaman sudah dimuat ulang.",
     },
   },
 };

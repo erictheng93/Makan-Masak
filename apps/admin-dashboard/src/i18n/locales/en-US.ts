@@ -1003,6 +1003,12 @@ const enUS: Messages = {
     loadFailed: "Failed to load",
     saveFailed: "Failed to save",
     deleteFailed: "Failed to delete",
+    quota: {
+      orders: "This period's order limit has been reached",
+      print: "This period's print limit has been reached",
+      ai: "This period's AI request limit has been reached",
+      generic: "This period's usage limit has been reached",
+    },
     subscription: {
       subscriptionNotFound:
         "No subscription was found for this restaurant, so its features are not activated yet. Your sign-in is fine — please contact support to get it set up.",
@@ -6506,26 +6512,16 @@ const enUS: Messages = {
     trialExpiredAction: "Choose a plan",
     trialExpiredTitle: "Your free trial has ended",
     trialExpiredContinue: "Continue",
-    upgradeTitle: "Upgrade your plan",
-    upgradeBody:
-      "Online checkout isn't available yet. Email us and we'll set up your plan. Everything keeps working in the meantime.",
-    upgradeAction: "Email us to upgrade",
-    upgradeMailSubject: "Upgrade my MakanMasak plan",
     usageTitle: "Usage this cycle",
     usageEmpty: "No usage recorded this cycle yet.",
     modulesTitle: "Included features",
     moduleOn: "On",
     moduleOff: "Off",
-    changePlanTitle: "Need a different plan?",
-    changePlanHint:
-      "Plan changes are handled by the platform team. Raise a support ticket and we will get back to you.",
-    changePlanCta: "Raise a support ticket",
     loadFailed: "Could not load your subscription. Please try again.",
     tier: {
       trial: "Trial",
-      basic: "Basic",
-      standard: "Standard",
-      premium: "Premium",
+      basic: "Standard",
+      pro: "Professional",
       enterprise: "Enterprise",
     },
     meter: {
@@ -6534,6 +6530,98 @@ const enUS: Messages = {
       print_jobs: "Print jobs",
       ai_requests: "AI requests",
       storage_bytes: "Storage (bytes)",
+    },
+    quota: {
+      viewPlans: "View plans",
+      warning: {
+        orders: "{pct}% of this period's orders used ({used}/{limit})",
+        print: "{pct}% of this period's print jobs used ({used}/{limit})",
+        ai: "{pct}% of this period's AI requests used ({used}/{limit})",
+      },
+      over: {
+        orders: "Order limit reached: customers cannot place orders right now",
+        print:
+          "Print limit reached: receipts and tickets cannot be printed right now",
+        ai: "AI request limit reached: AI features are unavailable for now",
+      },
+    },
+    plans: {
+      title: "Choose a plan",
+      hint: "Change plans any time, with no online payment. Upgrades take effect immediately; downgrades take effect at the end of the current period and can be cancelled before then.",
+      guide: "Plans and usage guide",
+      loadFailed: "Could not load plan information. Please try again later.",
+      unlimited: "Unlimited",
+      upgradeNow: "Upgrade now",
+      downgradeNow: "Downgrade now",
+      scheduleDowngrade: "Schedule downgrade, effective {date}",
+      unavailable: "Unavailable",
+      unavailableRegion: "This plan is not available in your region yet.",
+      unavailableTrial:
+        "The trial is for new shops only and cannot be re-entered.",
+      changed: "Plan changed to {plan}",
+      scheduled: "Downgrade to {plan} scheduled",
+      limit: {
+        orders: "Orders per period",
+        print: "Print jobs per period",
+        ai: "AI requests per period",
+        storage: "Storage",
+      },
+    },
+    pending: {
+      scheduled: "Downgrade to {plan} scheduled for {date}",
+      waitingShift:
+        "Downgrade to {plan} is scheduled but waiting for the open cash shift to be closed.",
+      cancel: "Cancel downgrade",
+      cancelTitle: "Cancel the scheduled downgrade?",
+      cancelMessage: "You will stay on your current plan.",
+      cancelled: "Downgrade cancelled",
+      badge: "Scheduled for {date}",
+    },
+    confirm: {
+      title: "Switch to {plan}",
+      effectiveNow: "Takes effect immediately.",
+      effectiveCycleEnd:
+        "Takes effect at the end of this period ({date}); until then you keep your current plan's features.",
+      trialNoReturn: "Once you leave the trial you cannot go back to it.",
+      gained: "What you gain",
+      lost: "What you lose",
+      blocking: "Resolve this first",
+      impact: "What changes",
+      goToPos: "Go to POS to close the shift",
+      confirmUpgrade: "Confirm upgrade",
+      confirmDowngrade: "Confirm downgrade",
+    },
+    impact: {
+      open_cash_shift:
+        "{count} cash shift(s) still open: close them in POS before downgrading",
+      future_reservations:
+        "{count} future reservation(s) will no longer be viewable in the dashboard",
+      future_service_bookings:
+        "{count} future service booking(s) will no longer be viewable in the dashboard",
+      active_coupons: "{count} active coupon(s) will stop applying",
+      scheduled_shifts:
+        "{count} scheduled shift(s) will no longer be viewable in the dashboard",
+      pending_leave_requests:
+        "{count} pending leave request(s) can no longer be processed",
+      tracked_ingredients:
+        "Stock for {count} ingredient(s) will no longer be tracked",
+      connected_platforms:
+        "{count} connected delivery platform(s) will be disconnected",
+      usage_over_new_limit:
+        "{count} usage meter(s) are already over the new plan's limit",
+    },
+    errors: {
+      unchanged: "You are already on this plan.",
+      trialNotReenterable: "You cannot go back to the trial.",
+      notInRegion: "This plan is not available in your region yet.",
+      inactive:
+        "The subscription is inactive, so the plan cannot be changed. Please contact support.",
+      openShift:
+        "A cash shift is still open. Close it in POS before downgrading.",
+      conflict:
+        "The plan was just changed by someone else. The page has been refreshed; please review and try again.",
+      noPending:
+        "There is no scheduled downgrade any more. The page has been refreshed.",
     },
   },
 };

@@ -21,6 +21,7 @@
 
       <RestaurantContextBanner />
       <TrialExpiredBanner />
+      <QuotaBanner />
       <TrialExpiredModal />
 
       <main class="admin-content flex-1 overflow-y-auto">
@@ -41,6 +42,7 @@ import Sidebar from "@/components/layout/Sidebar.vue";
 import Header from "@/components/layout/Header.vue";
 import NotificationPanel from "@/components/layout/NotificationPanel.vue";
 import RestaurantContextBanner from "@/components/layout/RestaurantContextBanner.vue";
+import QuotaBanner from "@/components/layout/QuotaBanner.vue";
 import TrialExpiredBanner from "@/components/layout/TrialExpiredBanner.vue";
 import TrialExpiredModal from "@/components/layout/TrialExpiredModal.vue";
 import { useRealtimeConnection } from "@/composables/useRealtimeConnection";

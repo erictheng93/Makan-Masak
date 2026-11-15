@@ -898,6 +898,12 @@ const jaJP: Messages = {
     loadFailed: "読み込みに失敗しました",
     saveFailed: "保存に失敗しました",
     deleteFailed: "削除に失敗しました",
+    quota: {
+      orders: "今期の注文数の上限に達しました",
+      print: "今期の印刷数の上限に達しました",
+      ai: "今期の AI リクエスト数の上限に達しました",
+      generic: "今期の利用上限に達しました",
+    },
     subscription: {
       moduleNotEnabled:
         "この機能は現在のプランには含まれていません。プランをアップグレードするか、サポートに問い合わせて有効にしてください。",
@@ -6502,26 +6508,16 @@ const jaJP: Messages = {
     trialExpiredAction: "プランを選ぶ",
     trialExpiredTitle: "無料トライアルは終了しました",
     trialExpiredContinue: "続ける",
-    upgradeTitle: "プランのアップグレード",
-    upgradeBody:
-      "オンラインでのお申し込みはまだご利用いただけません。メールでご連絡ください。プランを設定いたします。それまでの間もすべての機能をご利用いただけます。",
-    upgradeAction: "メールでアップグレードを依頼",
-    upgradeMailSubject: "MakanMasak プランのアップグレード",
     usageTitle: "今期の使用量",
     usageEmpty: "今期の使用記録はまだありません。",
     modulesTitle: "含まれる機能",
     moduleOn: "有効",
     moduleOff: "無効",
-    changePlanTitle: "プランを変更しますか？",
-    changePlanHint:
-      "プラン変更はプラットフォームチームが対応します。サポートチケットからご連絡ください。",
-    changePlanCta: "サポートチケットを作成",
     loadFailed: "サブスクリプション情報を読み込めませんでした。",
     tier: {
       trial: "トライアル",
-      basic: "ベーシック",
-      standard: "スタンダード",
-      premium: "プレミアム",
+      basic: "スタンダード",
+      pro: "プロフェッショナル",
       enterprise: "エンタープライズ",
     },
     meter: {
@@ -6530,6 +6526,97 @@ const jaJP: Messages = {
       print_jobs: "印刷ジョブ",
       ai_requests: "AI リクエスト",
       storage_bytes: "ストレージ（バイト）",
+    },
+    quota: {
+      viewPlans: "プランを見る",
+      warning: {
+        orders: "今期の注文数が上限の {pct}% に達しました（{used}/{limit}）",
+        print: "今期の印刷数が上限の {pct}% に達しました（{used}/{limit}）",
+        ai: "今期の AI リクエスト数が上限の {pct}% に達しました（{used}/{limit}）",
+      },
+      over: {
+        orders: "注文数の上限に達しました。現在お客様は注文できません",
+        print: "印刷数の上限に達しました。現在レシートや伝票を印刷できません",
+        ai: "AI リクエスト数の上限に達しました。AI 機能は一時的にご利用いただけません",
+      },
+    },
+    plans: {
+      title: "プランを選ぶ",
+      hint: "オンライン決済は不要で、いつでもプランを変更できます。アップグレードはすぐに反映され、ダウングレードは今期の終了時に反映されます（それまでは取り消せます）。",
+      guide: "プランと利用量のガイド",
+      loadFailed:
+        "プラン情報を読み込めませんでした。しばらくしてからもう一度お試しください。",
+      unlimited: "無制限",
+      upgradeNow: "今すぐアップグレード",
+      downgradeNow: "今すぐダウングレード",
+      scheduleDowngrade: "ダウングレードを予約（{date} に反映）",
+      unavailable: "選択できません",
+      unavailableRegion:
+        "このプランはお住まいの地域ではまだ提供されていません。",
+      unavailableTrial:
+        "トライアルは新規店舗のみで、再度利用することはできません。",
+      changed: "プランを{plan}に変更しました",
+      scheduled: "{plan}へのダウングレードを予約しました",
+      limit: {
+        orders: "期間あたりの注文数",
+        print: "期間あたりの印刷数",
+        ai: "期間あたりの AI リクエスト数",
+        storage: "ストレージ",
+      },
+    },
+    pending: {
+      scheduled: "{date} に {plan} へダウングレードする予約があります",
+      waitingShift:
+        "{plan} へのダウングレードは予約済みですが、未終了のレジ締め前シフトがあるため、シフトを終了するまで反映されません。",
+      cancel: "ダウングレードを取り消す",
+      cancelTitle: "予約したダウングレードを取り消しますか？",
+      cancelMessage: "現在のプランのまま利用を続けます。",
+      cancelled: "ダウングレードを取り消しました",
+      badge: "{date} に反映予定",
+    },
+    confirm: {
+      title: "{plan}に変更",
+      effectiveNow: "すぐに反映されます。",
+      effectiveCycleEnd:
+        "今期の終了時（{date}）に反映されます。それまでは現在のプランの機能を利用できます。",
+      trialNoReturn: "トライアルを終了すると、トライアルには戻れません。",
+      gained: "利用できるようになる機能",
+      lost: "利用できなくなる機能",
+      blocking: "先に対応が必要です",
+      impact: "変更後の影響",
+      goToPos: "POS でシフトを終了する",
+      confirmUpgrade: "アップグレードを確定",
+      confirmDowngrade: "ダウングレードを確定",
+    },
+    impact: {
+      open_cash_shift:
+        "未終了のレジシフトが {count} 件あります。ダウングレード前に POS で終了してください",
+      future_reservations:
+        "今後の予約 {count} 件は管理画面で確認できなくなります",
+      future_service_bookings:
+        "今後のサービス予約 {count} 件は管理画面で確認できなくなります",
+      active_coupons: "利用中のクーポン {count} 件が使えなくなります",
+      scheduled_shifts:
+        "予定済みのシフト {count} 件は管理画面で確認できなくなります",
+      pending_leave_requests:
+        "承認待ちの休暇申請 {count} 件を処理できなくなります",
+      tracked_ingredients: "食材 {count} 件の在庫管理が停止します",
+      connected_platforms:
+        "連携中のデリバリープラットフォーム {count} 件が切断されます",
+      usage_over_new_limit:
+        "{count} 項目の今期の利用量が新プランの上限を超えています",
+    },
+    errors: {
+      unchanged: "すでにこのプランをご利用中です。",
+      trialNotReenterable: "トライアルには戻れません。",
+      notInRegion: "このプランはお住まいの地域ではまだ提供されていません。",
+      inactive:
+        "サブスクリプションが無効のため、プランを変更できません。サポートにお問い合わせください。",
+      openShift:
+        "未終了のレジシフトがあります。ダウングレード前に POS で終了してください。",
+      conflict:
+        "プランがたった今ほかの人によって変更されました。画面を更新しましたので、内容を確認してからもう一度お試しください。",
+      noPending: "予約中のダウングレードはもうありません。画面を更新しました。",
     },
   },
 };

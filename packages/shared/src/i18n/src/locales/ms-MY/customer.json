@@ -463,6 +463,7 @@
     "orderSubmitInsufficientInventory": "Stok satu atau lebih item tidak mencukupi. Sila kemas kini troli dan cuba lagi.",
     "orderSubmitBelowMinimum": "Pesanan ini kurang daripada jumlah pesanan minimum restoran. Sila tambah item dan cuba lagi.",
     "orderSubmitRestaurantUnavailable": "Restoran ini tidak menerima pesanan buat masa ini.",
+    "orderSubmitQuotaExceeded": "Kedai ini buat sementara waktu tidak menerima pesanan dalam talian. Sila buat pesanan dengan kakitangan.",
     "orderSubmitTableUnavailable": "Meja ini tidak tersedia untuk pesanan. Sila minta bantuan staf.",
     "orderSubmitSeatUnavailable": "Tempat duduk ini tidak tersedia untuk pesanan. Sila imbas kod QR sekali lagi.",
     "orderSubmitInvalidContact": "Sila semak maklumat hubungan anda dan cuba lagi.",

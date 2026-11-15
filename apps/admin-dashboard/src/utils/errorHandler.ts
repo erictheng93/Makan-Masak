@@ -1,6 +1,7 @@
 import { useToast } from "vue-toastification";
 import { apiUrl } from "@/services/api-url";
 import { t } from "@/i18n";
+import UndoToast from "@/components/common/UndoToast.vue";
 import { resolveAdminUserFacingError } from "@/utils/userFacingError";
 import { getAuthToken } from "@/utils/authTokenProvider";
 import { currentLoginPath } from "@/utils/loginShop";
@@ -509,6 +510,28 @@ export class ErrorHandler {
       if (onLoginPage || !hasToken) {
         return;
       }
+    }
+
+    // A plan limit, not a fault: say which one and offer the way out. Reuses
+    // the Undo toast's message + one-button layout.
+    if (extractApiErrorCode(error) === "QUOTA_EXCEEDED") {
+      toast.error(
+        {
+          component: UndoToast,
+          props: {
+            message: error.message,
+            label: t("billing.quota.viewPlans"),
+          },
+          listeners: {
+            undo: () =>
+              void import("@/router").then(({ router }) =>
+                router.push({ name: "Billing", hash: "#plans" }),
+              ),
+          },
+        },
+        { timeout: 8000, closeOnClick: false },
+      );
+      return;
     }
 
     const duration = error.severity === ErrorSeverity.HIGH ? 8000 : 4000;

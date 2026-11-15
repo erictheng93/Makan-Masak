@@ -463,6 +463,7 @@
     "orderSubmitInsufficientInventory": "部分商品庫存不足，請更新購物車後再試。",
     "orderSubmitBelowMinimum": "訂單金額未達本店最低消費，請再加點後重試。",
     "orderSubmitRestaurantUnavailable": "此餐廳目前暫停接單。",
+    "orderSubmitQuotaExceeded": "此店家暫時無法接受線上點餐，請直接向店員點餐。",
     "orderSubmitTableUnavailable": "此桌位目前無法點餐，請洽現場人員協助。",
     "orderSubmitSeatUnavailable": "此座位目前無法點餐，請重新掃描 QR Code。",
     "orderSubmitInvalidContact": "請確認聯絡資料後再試。",

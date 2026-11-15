@@ -442,3 +442,59 @@ describe("one failure -> at most one toast", () => {
     );
   });
 });
+
+describe("QUOTA_EXCEEDED (a plan limit, not rate limiting)", () => {
+  const quotaError = (meterKey: string) => ({
+    isAxiosError: true,
+    response: {
+      status: 429,
+      data: {
+        success: false,
+        error: {
+          code: "QUOTA_EXCEEDED",
+          message: "Quota exceeded for server prose",
+          details: { meterKey, hardLimit: 100, current: 100 },
+        },
+      },
+    },
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    ["orders.created", "已達本期訂單上限"],
+    ["print.jobs", "已達本期列印上限"],
+    ["ai.requests", "已達本期 AI 請求上限"],
+    ["storage.bytes", "已達本期用量上限"],
+  ])("names the %s limit and links to the plans", (meterKey, message) => {
+    const details = KitchenErrorHandler.handleAPIError(quotaError(meterKey), {
+      url: "/orders",
+    });
+
+    expect(details.message).toBe(message);
+    expect(details.message).not.toBe(t("errorPresentation.tooManyRequests"));
+  });
+
+  it("toasts the message with a button to the billing page, once", async () => {
+    vi.useFakeTimers();
+    try {
+      KitchenErrorHandler.handleAPIError(quotaError("print.jobs"), {
+        url: "/print",
+      });
+      vi.runAllTimers();
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(toastError).toHaveBeenCalledOnce();
+    expect(toastError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        props: { message: "已達本期列印上限", label: "查看方案" },
+        listeners: { undo: expect.any(Function) },
+      }),
+      expect.objectContaining({ timeout: expect.any(Number) }),
+    );
+  });
+});
