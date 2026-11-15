@@ -4,6 +4,7 @@ import {
   countRestaurantData,
   getRestaurantDeletionPlan,
   orderItems,
+  restaurantExpenses,
   restaurants,
   seats,
   tables,
@@ -223,6 +224,7 @@ describe("permanent restaurant deletion (real D1)", () => {
       reservations
       restaurant_alerts
       restaurant_customers
+      restaurant_expenses
       restaurant_faqs
       restaurant_market_memberships
       restaurant_service_items
@@ -351,6 +353,37 @@ describe("permanent restaurant deletion (real D1)", () => {
     expect(kept).toEqual(
       expect.objectContaining({ restaurantId: stays.id, userId: null }),
     );
+  });
+
+  it("deletes a shop's expense rows, live and soft-deleted, with the shop", async () => {
+    const admin = await administrator();
+    const gone = await seedShop("Leaving Shop");
+    const stays = await seedShop("Staying Shop");
+    const expense = (restaurantId: string, deletedAt: Date | null) => ({
+      restaurantId,
+      businessDate: "2026-11-01",
+      category: "rent" as const,
+      amountCents: 50000,
+      createdAt: new Date(),
+      deletedAt,
+    });
+    await db()
+      .insert(restaurantExpenses)
+      .values([
+        expense(gone.id, null),
+        expense(gone.id, new Date()),
+        expense(stays.id, null),
+      ]);
+    await deactivate(gone.id);
+
+    const response = await permanentDelete(gone.id, admin.token, {
+      confirmName: "Leaving Shop",
+    });
+
+    expect(response.status).toBe(200);
+    expect(await exists(gone.id)).toBe(false);
+    const left = await db().select().from(restaurantExpenses);
+    expect(left).toEqual([expect.objectContaining({ restaurantId: stays.id })]);
   });
 
   it("deletes nothing when a table the plan does not know still points at the restaurant", async () => {
