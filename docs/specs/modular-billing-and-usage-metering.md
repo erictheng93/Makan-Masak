@@ -279,7 +279,7 @@ Onboarding 收的 `planId`（沿用既有 `LicenseTier` 命名）→ 訂閱 `pla
 | `standard` | `basic` | 無 trial，建立後立即進入 `basic` cycle |
 | `professional` | `pro` | 無 trial，建立後立即進入 `pro` cycle |
 | `enterprise` | `enterprise` | 無 trial，建立後立即進入 `enterprise` cycle |
-| *（未指定 / null / opt-in trial）* | `trial` | 14 天 trial，到期降為 `basic` |
+| *（未指定 / null / opt-in trial）* | `trial` | 180 天 trial（`TRIAL_DURATION_DAYS`）；到期後不降級，只提醒（見 §4.3） |
 
 **新增**`packages/database/src/utils/plan-mapping.ts` 集中此 map，讓 onboarding 與 subscription service 共用：
 
@@ -289,7 +289,8 @@ export const PLAN_ID_TO_TIER: Record<string, PlanTier> = {
   professional: PLAN_TIERS.PRO,
   enterprise: PLAN_TIERS.ENTERPRISE,
 };
-export const TRIAL_DURATION_MS = 14 * 24 * 60 * 60 * 1000;  // 14 days, locked
+export const TRIAL_DURATION_DAYS = 180;
+export const TRIAL_DURATION_MS = TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000;
 export const DEFAULT_BILLING_CYCLE_MS = 30 * 24 * 60 * 60 * 1000;  // 30 days, locked
 ```
 
@@ -417,7 +418,13 @@ export const PLAN_QUOTAS: Record<PlanTier, Partial<Record<MeterKey, {
   soft: number;   // 80% 通知門檻
   hard: number;   // 100% 拒絕門檻
 }>>> = {
-  trial:      { /* 全部 unlimited（undefined = no limit） */ },
+  trial:      {
+    "orders.created":  { soft: 2400,   hard: 3000 },   // 整個 trial cycle 合計，非每月
+    "api.requests":    { soft: 8000,   hard: 10000 },
+    "print.jobs":      { soft: 2400,   hard: 3000 },
+    "ai.requests":     { soft: 8,      hard: 10 },
+    "storage.bytes":   { soft: 800_000_000, hard: 1_000_000_000 },
+  },
   basic:      {
     "orders.created":  { soft: 800,    hard: 1000 },
     "api.requests":    { soft: 80000,  hard: 100000 },
@@ -568,7 +575,7 @@ effectiveCount =
 
 #### 3.4.3 Trial 處理
 
-`planTier === 'trial'`：所有 meter unlimited（`PLAN_QUOTAS.trial = {}`），直接通過。
+`planTier === 'trial'`：與其他 tier 相同走 `PLAN_QUOTAS.trial`（訂單 3000、列印 3000 等，見 §3.2）；trial 期內為整段 `[createdAt, trialEndsAt)` 合計，到期後（tier 仍是 `trial`）退回自然月 cycle。
 
 #### 3.4.4 Bypass 條件
 
@@ -810,7 +817,7 @@ export const notificationDispatchLog = sqliteTable("notification_dispatch_log", 
 
 - 提醒來源：`/me/modules` 仍回傳 `trialEndsAt`；admin-dashboard 的 `TrialExpiredBanner`（店主限定，可關閉，重新載入後再出現）與 `BillingView` 顯示到期文案。
 - Email：`BillingReminderService` 每日 cron 寄 `trial_3d`（剩 2～4 天）、`trial_1d`（剩 0～2 天）、`trial_0d`（7 天內剛到期，「功能照常使用，請選擇方案」）。窗口是「剩餘時間範圍」而非 24h 定點，cron 漏跑後下一次仍會補寄；只寄一次靠 SQL `NOT EXISTS notification_dispatch_log` 過濾（不靠 `send()` 去重，否則同一批 250 列會佔滿 `LIMIT`）。只讀不寫 `shop_subscriptions`。寄送失敗（`FAILED`）目前與 `send()` 一致，視為已處理、不重試。
-- 用量 cycle：trial 仍在期內用 `[createdAt, trialEndsAt)`；到期後 tier 仍是 `trial`，所以 `usage-aggregator.ts`、`quotaGate.ts`、`UsageService.ts` 三處一致改為退回自然月 cycle，避免寫入與讀取落在不同 cycle。`trialEndsAt` 為 null 時預設長度用 `TRIAL_DURATION_DAYS`（原本寫死 14 天）。
+- 用量 cycle：trial 仍在期內用 `[createdAt, trialEndsAt)`；到期後 tier 仍是 `trial`，所以 `usage-aggregator.ts`、`quotaGate.ts`、`UsageService.ts` 三處一致改為退回自然月 cycle，避免寫入與讀取落在不同 cycle。`trialEndsAt` 為 null 時預設長度用 `TRIAL_DURATION_DAYS`（原本寫死 14 天，現為 180 天）。
 
 ### 4.4 外部金流 Webhook
 
@@ -922,7 +929,7 @@ P3-c 上線時實作至少一個（取決於 §5 #1 決策後）。本 SPEC 寫�
 | 1 | 外部金流商選擇（Stripe / 藍新 / LINE Pay） | **暫時 skip**——P3 寫成 provider-agnostic（§4.4.1），金流商選定後實作對應 `WebhookProvider` |
 | 2 | 租戶自有部署 license token 機制 | **已取消**：平台代管部署已成為唯一支援模式 |
 | 3 | 自建 invoice / proration / dunning | **已決策**：永久 deferred（§8），只接外部平台 |
-| 4 | Trial 期間長度 | **已鎖定 14 天**（§2.3.1 `TRIAL_DURATION_MS` 常數） |
+| 4 | Trial 期間長度 | **已鎖定 180 天**（§2.3.1 `TRIAL_DURATION_DAYS` 常數）；到期後只提醒、不降級（§4.3） |
 | 5 | Plan 升級 cycle 處理 | **已鎖定**：立即生效，不 prorate（外部平台處理 prorate 即可） |
 | 6 | Quota 具體數字（§3.2） | 數字佔位中，上線前需用真實客戶 30 天用量校準。**不阻擋 P2 實作**——Codex 用 SPEC 數字實作即可 |
 | 7 | Email provider | **已決策**：Resend（§4.5.2）。若 PM 否決可後續換，介面已抽象 |

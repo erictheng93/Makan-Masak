@@ -46,7 +46,7 @@ function createDb() {
             };
           }
           if (sql.includes("FROM usage_meters")) {
-            return { total_quantity: 100 };
+            return { total_quantity: 3000 };
           }
           if (sql.includes("FROM usage_events")) {
             return { total: 0 };

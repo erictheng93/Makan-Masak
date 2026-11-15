@@ -464,11 +464,11 @@ describe("quota enforcement over unfolded buckets", () => {
       createdAt: new Date(Date.now() - DAY_MS),
       trialEndsAt: new Date(Date.now() + 13 * DAY_MS),
     });
-    // The trial hard limit for orders.created is 100 (PLAN_QUOTAS).
+    // The trial hard limit for orders.created is 3000 (PLAN_QUOTAS).
     await recordUsageBucketDelta(testDb.bindings.DB, {
       restaurantId: RESTAURANT_ID,
       meterKey: "orders.created",
-      quantity: 100,
+      quantity: 3000,
     });
 
     const { context, waitUntilPromises, headers } = buildMeterContext();
@@ -497,12 +497,12 @@ describe("quota enforcement over unfolded buckets", () => {
       meterKey: "orders.created",
       cycleStartAt: new Date(cycleStart),
       cycleEndAt: new Date(cycleStart + 14 * DAY_MS),
-      totalQuantity: 60,
+      totalQuantity: 2000,
     });
     await recordUsageBucketDelta(testDb.bindings.DB, {
       restaurantId: RESTAURANT_ID,
       meterKey: "orders.created",
-      quantity: 40,
+      quantity: 1000,
     });
 
     const { context, waitUntilPromises, headers } = buildMeterContext();
