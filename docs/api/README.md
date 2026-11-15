@@ -599,6 +599,8 @@ agent's restaurant and register scope.
 | PUT    | `/scheduling/schedules/:id`                | 更新排班    | Protected |
 | DELETE | `/scheduling/schedules/:id`                | 刪除排班    | Protected |
 
+排班的時薪快照 `hourlyRateCents` 只在 `completed` 的班存在，僅 role 0/1 可讀寫（role 2–4 的回應會移除此欄）。編輯已完成的班時：快照為空則以當下的員工時薪（否則班別時薪）補上；已有快照則保留，不因改工時而以今日時薪重算；改派員工或班別時重新解析；離開 `completed`（含取消、換班 drop、請假核准取消）時清除。`PUT /scheduling/schedules/:id` 可帶 `hourlyRateCents` 修正已完成班的快照（整數 cents，須符合店家幣別步進，否則 `CURRENCY_PRECISION` 400；`null` = 依上述規則重新解析；班不是 `completed` 時回 `SCHEDULE_NOT_COMPLETED` 400）。
+
 **打卡：**
 
 | Method | Path                                        | Description    | Auth        |
@@ -1075,7 +1077,7 @@ so a token can never be replayed against a different room.
 
 錯誤碼：`VALIDATION_ERROR` 400（日期、類別、金額或費率鍵不合法）、`PNL_RANGE_INVALID` 400、`PNL_RATES_DATE_INVALID` 400、`PNL_RATES_TOO_MANY_VERSIONS` 400、`EXPENSE_DATE_IN_FUTURE` 400、`FORBIDDEN` 403、`RESTAURANT_NOT_FOUND` 404、`EXPENSE_NOT_FOUND` 404、`PNL_RATES_CONFLICT` 409。
 
-`settings.pnlRates` 只能經由 `PUT /pnl/:restaurantId/rates` 寫入；`PUT /restaurants/:id` 的 settings 不接受此鍵，也不會覆寫已存的版本。
+`settings.pnlRates` 只能經由 `PUT /pnl/:restaurantId/rates` 寫入；`PUT /restaurants/:id` 的 settings 不接受此鍵，也不會覆寫已存的版本。`PUT /restaurants/:id` 的 settings 在同一條 UPDATE 內逐一頂層鍵合併到寫入當下的資料列（等同 `{ ...已存, ...傳入 }`：`null` 存為 `null`、物件與陣列整個取代），未傳入的鍵（包括 `pnlRates`）一律保留寫入當下的值；含 `"` 的鍵回 `VALIDATION_ERROR` 400。
 
 ### SEO (mounted at `/`) — 2 routes
 

@@ -383,6 +383,24 @@ export class SchedulingService extends BaseService {
     return template?.rate ?? null;
   }
 
+  /** Snapshot for a row moving to another employee: theirs if completed, else none. */
+  private async reassignedRateCents(
+    row: {
+      status: string;
+      restaurantId: string;
+      shiftTemplateId: number | null;
+    },
+    employeeId: string,
+  ): Promise<number | null> {
+    return row.status === "completed"
+      ? this.resolveHourlyRateCents(
+          employeeId,
+          row.restaurantId,
+          row.shiftTemplateId,
+        )
+      : null;
+  }
+
   private conflictWhere(id: number, restaurantId?: string) {
     return restaurantId === undefined
       ? eq(schedulingConflicts.id, id)
@@ -742,27 +760,47 @@ export class SchedulingService extends BaseService {
       }
     }
 
-    // The wage snapshot is written only by completion paths, never by callers.
-    const { hourlyRateCents: _ignored, ...safeData } = data;
+    // The wage snapshot is "the rate that applied to this shift". Only a
+    // completed shift carries one: an edit fills a missing snapshot, keeps an
+    // existing one (an hours fix must not re-price at today's wage), and
+    // re-resolves when the employee or template changes. Leaving completed
+    // clears it. `hourlyRateCents` from the caller is an owner override for a
+    // completed shift (null = re-resolve); the route gates it to roles 0/1.
+    const { hourlyRateCents: requestedRate, ...safeData } = data;
     const patch: Partial<typeof employeeSchedules.$inferInsert> = {
       ...safeData,
     };
-    if (safeData.status === "completed") {
-      const [current] = await this.db
-        .select({
-          employeeId: employeeSchedules.employeeId,
-          restaurantId: employeeSchedules.restaurantId,
-          shiftTemplateId: employeeSchedules.shiftTemplateId,
-          hourlyRateCents: employeeSchedules.hourlyRateCents,
-        })
-        .from(employeeSchedules)
-        .where(this.scheduleWhere(id, restaurantId))
-        .limit(1);
-      if (current && current.hourlyRateCents == null) {
+    const [current] = await this.db
+      .select({
+        employeeId: employeeSchedules.employeeId,
+        restaurantId: employeeSchedules.restaurantId,
+        shiftTemplateId: employeeSchedules.shiftTemplateId,
+        status: employeeSchedules.status,
+        hourlyRateCents: employeeSchedules.hourlyRateCents,
+      })
+      .from(employeeSchedules)
+      .where(this.scheduleWhere(id, restaurantId))
+      .limit(1);
+    if (current) {
+      const employeeId = safeData.employeeId ?? current.employeeId;
+      const templateId =
+        safeData.shiftTemplateId !== undefined
+          ? safeData.shiftTemplateId
+          : current.shiftTemplateId;
+      if ((safeData.status ?? current.status) !== "completed") {
+        patch.hourlyRateCents = null;
+      } else if (requestedRate != null) {
+        patch.hourlyRateCents = requestedRate;
+      } else if (
+        requestedRate === null ||
+        current.hourlyRateCents == null ||
+        employeeId !== current.employeeId ||
+        templateId !== current.shiftTemplateId
+      ) {
         patch.hourlyRateCents = await this.resolveHourlyRateCents(
-          current.employeeId,
+          employeeId,
           current.restaurantId,
-          safeData.shiftTemplateId ?? current.shiftTemplateId,
+          templateId,
         );
       }
     }
@@ -796,7 +834,11 @@ export class SchedulingService extends BaseService {
   async deleteSchedule(id: number, restaurantId?: string): Promise<boolean> {
     const [deleted] = await this.db
       .update(employeeSchedules)
-      .set({ status: "cancelled", updatedAt: new Date() })
+      .set({
+        status: "cancelled",
+        hourlyRateCents: null,
+        updatedAt: new Date(),
+      })
       .where(this.scheduleWhere(id, restaurantId))
       .returning();
 
@@ -1014,6 +1056,7 @@ export class SchedulingService extends BaseService {
       .set({
         clockInTime: data.clockInTime,
         status: "confirmed",
+        hourlyRateCents: null,
         notes: data.notes || schedule.notes,
         updatedAt: new Date(),
       })
@@ -1839,6 +1882,10 @@ export class SchedulingService extends BaseService {
               .update(employeeSchedules)
               .set({
                 employeeId: targetRow.employeeId,
+                hourlyRateCents: await this.reassignedRateCents(
+                  requesterRow,
+                  targetRow.employeeId,
+                ),
                 updatedBy: managerId,
                 updatedAt: now,
               })
@@ -1849,6 +1896,10 @@ export class SchedulingService extends BaseService {
               .update(employeeSchedules)
               .set({
                 employeeId: requesterRow.employeeId,
+                hourlyRateCents: await this.reassignedRateCents(
+                  targetRow,
+                  requesterRow.employeeId,
+                ),
                 updatedBy: managerId,
                 updatedAt: now,
               })
@@ -1863,6 +1914,10 @@ export class SchedulingService extends BaseService {
               .update(employeeSchedules)
               .set({
                 employeeId: request.targetEmployeeId,
+                hourlyRateCents: await this.reassignedRateCents(
+                  requesterRow,
+                  request.targetEmployeeId,
+                ),
                 updatedBy: managerId,
                 updatedAt: now,
               })
@@ -1883,6 +1938,10 @@ export class SchedulingService extends BaseService {
             .update(employeeSchedules)
             .set({
               employeeId: request.targetEmployeeId,
+              hourlyRateCents: await this.reassignedRateCents(
+                requesterRow,
+                request.targetEmployeeId,
+              ),
               updatedBy: managerId,
               updatedAt: now,
             })
@@ -1899,6 +1958,7 @@ export class SchedulingService extends BaseService {
             .update(employeeSchedules)
             .set({
               status: "cancelled",
+              hourlyRateCents: null,
               updatedBy: managerId,
               updatedAt: now,
             })
@@ -2266,6 +2326,7 @@ export class SchedulingService extends BaseService {
           .update(employeeSchedules)
           .set({
             status: "cancelled",
+            hourlyRateCents: null,
             managerNotes: params.reason,
             updatedBy: params.cancelledBy,
             updatedAt: new Date(),

@@ -757,7 +757,7 @@ describe("SchedulingService wage snapshot on completion", () => {
     await seedShift({ id: 4, userRate: 18000, templateRate: null });
     const first = await service().updateSchedule(
       4,
-      { status: "completed", hourlyRateCents: 1 },
+      { status: "completed" },
       "sched-rest",
     );
     expect(first.hourlyRateCents).toBe(18000);
@@ -772,5 +772,105 @@ describe("SchedulingService wage snapshot on completion", () => {
       "sched-rest",
     );
     expect(again.hourlyRateCents).toBe(18000);
+  });
+
+  describe("edits to a completed shift", () => {
+    async function seedCompleted(id: number, snapshot: number | null) {
+      await seedShift({ id, userRate: 20000, templateRate: 15000 });
+      await testDb.db
+        .prepare(
+          `UPDATE employee_schedules
+              SET status = 'completed', clock_out_time_ms = 1735704000000,
+                  actual_hours = 4, hourly_rate_cents = ?,
+                  work_date = ?
+            WHERE id = ?`,
+        )
+        // A date of its own, so later seeds never collide on the active slot.
+        .bind(snapshot, `2026-09-${String(id).padStart(2, "0")}`, id)
+        .run();
+    }
+    const setWage = (userId: string, cents: number | null) =>
+      testDb.db
+        .prepare("UPDATE users SET hourly_rate_cents = ? WHERE id = ?")
+        .bind(cents, userId)
+        .run();
+    const edit = (id: number, data: Record<string, unknown>) =>
+      service().updateSchedule(id, data, "sched-rest");
+
+    it("fills a missing snapshot on an hours edit", async () => {
+      await seedCompleted(10, null);
+      expect((await edit(10, { scheduledHours: 5 })).hourlyRateCents).toBe(
+        20000,
+      );
+    });
+
+    it("keeps an existing snapshot after the employee's wage changes", async () => {
+      await seedCompleted(11, 12000);
+      await setWage(employeeId, 99900);
+      const done = await edit(11, { scheduledHours: 5, endTime: "14:00" });
+      expect(done.hourlyRateCents).toBe(12000);
+    });
+
+    it("re-resolves when the employee or the template changes", async () => {
+      await seedCompleted(12, 12000);
+      await setWage(ownerId, 30000);
+      expect((await edit(12, { employeeId: ownerId })).hourlyRateCents).toBe(
+        30000,
+      );
+
+      await seedCompleted(13, 12000);
+      await setWage(employeeId, null);
+      expect((await edit(13, { shiftTemplateId: 12 })).hourlyRateCents).toBe(
+        15000,
+      );
+    });
+
+    it("clears the snapshot when the shift leaves completed", async () => {
+      await seedCompleted(14, 12000);
+      expect((await edit(14, { status: "confirmed" })).hourlyRateCents).toBe(
+        null,
+      );
+
+      await seedCompleted(15, 12000);
+      await service().deleteSchedule(15, "sched-rest");
+      expect((await service().getScheduleById(15))?.hourlyRateCents).toBe(null);
+    });
+
+    it("takes an owner override, and null re-resolves", async () => {
+      await seedCompleted(16, 12000);
+      expect((await edit(16, { hourlyRateCents: 17500 })).hourlyRateCents).toBe(
+        17500,
+      );
+      expect((await edit(16, { hourlyRateCents: null })).hourlyRateCents).toBe(
+        20000,
+      );
+      // Ignored on a shift that is not completed.
+      expect(
+        (await edit(16, { status: "confirmed", hourlyRateCents: 17500 }))
+          .hourlyRateCents,
+      ).toBe(null);
+    });
+
+    it("re-resolves when an approved cover moves a completed shift", async () => {
+      await seedCompleted(17, 12000);
+      await setWage(ownerId, 30000);
+      await testDb.db
+        .prepare(
+          `INSERT INTO schedule_swap_requests
+             (id, restaurant_id, requester_employee_id, requester_schedule_id,
+              target_employee_id, request_type, reason, status, created_at_ms, updated_at_ms)
+           VALUES (1, 'sched-rest', ?, 17, ?, 'cover', 'r', 'accepted', 1735689600000, 1735689600000)`,
+        )
+        .bind(employeeId, ownerId)
+        .run();
+      await service().approveSwapRequest(1, ownerId, "sched-rest");
+      const row = await service().getScheduleById(17);
+      expect(row).toEqual(
+        expect.objectContaining({
+          employeeId: ownerId,
+          hourlyRateCents: 30000,
+        }),
+      );
+    });
   });
 });

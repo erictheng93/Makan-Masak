@@ -17,7 +17,13 @@ import {
 import type { Env } from "../../../shared/types";
 import { HTTP_STATUS, USER_ROLES } from "../../../shared/constants";
 import { createSuccessResponse } from "../../../shared/utils";
-import { notFound, forbidden } from "../../../shared/utils/api-error";
+import {
+  notFound,
+  forbidden,
+  badRequest,
+} from "../../../shared/utils/api-error";
+import { resolveRestaurantCurrency } from "../../../shared/utils/restaurant-currency";
+import { isCurrencyAlignedCents } from "@makanmasak/utils";
 import { toCsvRow } from "../../../shared/utils/csv";
 
 // Import schemas
@@ -355,6 +361,26 @@ app.put(
     const existing = await service.getScheduleById(id, restaurantId);
     if (!existing) {
       throw notFound("Schedule not found");
+    }
+    if (data.hourlyRateCents !== undefined) {
+      if ((data.status ?? existing.status) !== "completed") {
+        throw badRequest(
+          "Only a completed shift has a wage snapshot",
+          "SCHEDULE_NOT_COMPLETED",
+        );
+      }
+      if (data.hourlyRateCents !== null) {
+        const currency = await resolveRestaurantCurrency(
+          c.env.DB,
+          existing.restaurantId,
+        );
+        if (!isCurrencyAlignedCents(data.hourlyRateCents, currency)) {
+          throw badRequest(
+            `Hourly rate must be a whole ${currency} amount`,
+            "CURRENCY_PRECISION",
+          );
+        }
+      }
     }
 
     const schedule = await service.updateSchedule(
