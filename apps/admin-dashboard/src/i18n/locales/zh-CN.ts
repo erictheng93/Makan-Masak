@@ -194,6 +194,7 @@ const zhCN: Messages = {
     },
     form: {
       originalPrice: "原价",
+      costPrice: "成本",
       productDetails: "商品详细资料",
       spiceLevel: "辣度（0–5）",
       preparationTime: "备餐时间（分钟）",
@@ -1761,6 +1762,68 @@ const zhCN: Messages = {
       expired: "已过期",
     },
   },
+  dailyPnl: {
+    title: "日账损益表",
+    description:
+      "每天一张损益表：营收、销货成本、营业费用，一眼看出今天赚了还是亏了。",
+    date: "日期",
+    noRestaurant: "请先选择餐厅。",
+    revenue: {
+      title: "营业收入",
+      grossSales: "销售总额",
+      discount: "折扣",
+      refund: "退款",
+      net: "净营收",
+      taxService: "含税额 {tax}／服务费 {service}",
+      orders: "{count} 笔订单",
+    },
+    cogs: {
+      title: "销货成本",
+      grossProfit: "毛利",
+      grossMargin: "毛利率",
+    },
+    expenses: {
+      title: "营业费用",
+      empty: "本日暂无营业费用",
+      category: "类别",
+      amount: "金额（{symbol}）",
+      note: "备注（选填）",
+      add: "新增费用",
+      delete: "删除费用",
+      deleteTitle: "删除费用",
+      deleteMessage: "确定要删除「{category}」{amount} 这笔费用吗？",
+      categories: {
+        labor: "人事",
+        rent: "租金",
+        utilities: "水电",
+        purchase: "进货",
+        misc: "杂项",
+      },
+    },
+    net: {
+      title: "本日损益",
+      profit: "盈",
+      loss: "亏",
+    },
+    warning: {
+      missingCost: "{count} 项售出品项未设置成本，毛利可能被高估",
+      manageMenu: "前往菜单设置成本",
+    },
+    costNote:
+      "销货成本按各品项“当前”的成本计算，修改成本会连带改变过去日期的毛利。",
+    toast: {
+      added: "已新增费用。",
+      deleted: "已删除费用。",
+    },
+    errors: {
+      loadFailed: "无法加载损益表，请重试。",
+      precision: "金额不符合此币别的最小单位。",
+      notFound: "找不到这笔费用，可能已被删除。",
+      addFailed: "新增费用失败，请重试。",
+      deleteFailed: "删除费用失败，请重试。",
+      amountInvalid: "请输入大于 0 的金额。",
+    },
+  },
   reviews: {
     title: "顾客评价",
     description: "查看顾客对订单与菜品的评分，并回复尚未处理的评价。",
@@ -1877,6 +1940,7 @@ const zhCN: Messages = {
   },
 
   nav: {
+    dailyPnl: "日账损益表",
     reviews: "顾客评价",
     broadcasts: "推送消息",
     billing: "订阅与用量",
@@ -1928,6 +1992,7 @@ const zhCN: Messages = {
   },
   pages: {
     marketOpenReport: "开店记录",
+    dailyPnl: "日账损益表",
     reviews: "顾客评价",
     broadcasts: "推送消息",
     billing: "订阅与用量",

@@ -316,6 +316,16 @@ describe("Sidebar", () => {
     );
   });
 
+  it("lists 日帳損益表 in the shop section for owners", () => {
+    authState.hasRestaurantContext = true;
+
+    const wrapper = mountSidebar();
+
+    expect(wrapper.find('[data-testid="nav-item-daily-pnl"]').exists()).toBe(
+      true,
+    );
+  });
+
   it("puts 推播訊息 in the shop section right after 顧客評價", () => {
     authState.hasRestaurantContext = true;
 

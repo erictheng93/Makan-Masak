@@ -200,6 +200,7 @@ const viVN: Messages = {
     },
     form: {
       originalPrice: "Giá gốc",
+      costPrice: "Giá vốn",
       productDetails: "Chi tiết sản phẩm",
       spiceLevel: "Độ cay (0–5)",
       preparationTime: "Thời gian chuẩn bị (phút)",
@@ -1791,6 +1792,69 @@ const viVN: Messages = {
       expired: "Hết hạn",
     },
   },
+  dailyPnl: {
+    title: "Báo cáo lãi lỗ theo ngày",
+    description:
+      "Mỗi ngày một báo cáo: doanh thu, giá vốn hàng bán và chi phí hoạt động, để biết hôm nay lãi hay lỗ.",
+    date: "Ngày",
+    noRestaurant: "Hãy chọn nhà hàng trước.",
+    revenue: {
+      title: "Doanh thu",
+      grossSales: "Tổng doanh số",
+      discount: "Giảm giá",
+      refund: "Hoàn tiền",
+      net: "Doanh thu thuần",
+      taxService: "Đã gồm thuế {tax} / phí dịch vụ {service}",
+      orders: "{count} đơn hàng",
+    },
+    cogs: {
+      title: "Giá vốn hàng bán",
+      grossProfit: "Lợi nhuận gộp",
+      grossMargin: "Biên lợi nhuận gộp",
+    },
+    expenses: {
+      title: "Chi phí hoạt động",
+      empty: "Chưa có chi phí hoạt động trong ngày này",
+      category: "Loại",
+      amount: "Số tiền ({symbol})",
+      note: "Ghi chú (tùy chọn)",
+      add: "Thêm chi phí",
+      delete: "Xóa chi phí",
+      deleteTitle: "Xóa chi phí",
+      deleteMessage: "Xóa khoản chi {category} {amount} này?",
+      categories: {
+        labor: "Nhân sự",
+        rent: "Tiền thuê",
+        utilities: "Điện nước",
+        purchase: "Nhập hàng",
+        misc: "Khác",
+      },
+    },
+    net: {
+      title: "Lãi lỗ trong ngày",
+      profit: "Lãi",
+      loss: "Lỗ",
+    },
+    warning: {
+      missingCost:
+        "{count} món đã bán chưa có giá vốn, lợi nhuận gộp có thể bị tính cao hơn thực tế",
+      manageMenu: "Đặt giá vốn trong quản lý thực đơn",
+    },
+    costNote:
+      "Giá vốn hàng bán tính theo giá vốn HIỆN TẠI của từng món, nên đổi giá vốn cũng làm thay đổi lợi nhuận gộp của các ngày trước.",
+    toast: {
+      added: "Đã thêm chi phí.",
+      deleted: "Đã xóa chi phí.",
+    },
+    errors: {
+      loadFailed: "Không thể tải báo cáo. Vui lòng thử lại.",
+      precision: "Số tiền không đúng đơn vị nhỏ nhất của loại tiền này.",
+      notFound: "Không tìm thấy khoản chi này, có thể đã bị xóa.",
+      addFailed: "Không thể thêm chi phí. Vui lòng thử lại.",
+      deleteFailed: "Không thể xóa chi phí. Vui lòng thử lại.",
+      amountInvalid: "Nhập số tiền lớn hơn 0.",
+    },
+  },
   reviews: {
     title: "Đánh giá của khách",
     description:
@@ -1914,6 +1978,7 @@ const viVN: Messages = {
   },
 
   nav: {
+    dailyPnl: "Lãi lỗ theo ngày",
     reviews: "Đánh giá",
     broadcasts: "Tin đẩy",
     billing: "Gói & Mức dùng",
@@ -1966,6 +2031,7 @@ const viVN: Messages = {
   },
   pages: {
     marketOpenReport: "Open-day report",
+    dailyPnl: "Báo cáo lãi lỗ theo ngày",
     reviews: "Đánh giá của khách",
     broadcasts: "Tin đẩy",
     billing: "Gói & Mức dùng",

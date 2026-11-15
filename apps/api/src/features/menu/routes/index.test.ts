@@ -343,6 +343,50 @@ describe("menu routes", () => {
     expect(response.status).toBe(404);
   });
 
+  it("keeps costPrice off every diner-facing read and on the owner's own", async () => {
+    const costed = { ...item, costPrice: 42 };
+    serviceFns.getMenu.mockResolvedValue({ ...menu, menuItems: [costed] });
+    serviceFns.getFeaturedItems.mockResolvedValue([costed]);
+    serviceFns.getPopularItems.mockResolvedValue([costed]);
+    serviceFns.searchMenuItems.mockResolvedValue({
+      items: [costed],
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    });
+    serviceFns.getMenuItem.mockResolvedValue(costed);
+    serviceFns.getDishFavoriteCounts.mockResolvedValue(new Map());
+
+    const read = async (path: string) =>
+      JSON.stringify(await (await request(path)).json());
+
+    for (const path of [
+      "/rest-1",
+      "/rest-1?includeAll=true",
+      "/rest-1/featured",
+      "/rest-1/popular",
+      "/rest-1/search",
+      "/items/11",
+    ]) {
+      expect(await read(path)).not.toContain("costPrice");
+    }
+
+    auth.user = {
+      id: "user-2",
+      username: "owner",
+      role: 1,
+      restaurantId: "rest-1",
+    };
+    expect(await read("/rest-1?includeAll=true")).toContain('"costPrice":42');
+    expect(await read("/items/11")).toContain('"costPrice":42');
+
+    auth.user = {
+      id: "user-9",
+      username: "owner",
+      role: 1,
+      restaurantId: "rest-2",
+    };
+    expect(await read("/items/11")).not.toContain("costPrice");
+  });
+
   it("adds diner save counts to the owner's menu only", async () => {
     serviceFns.getDishFavoriteCounts.mockResolvedValue(
       new Map([[Number(menu.menuItems[0].id), 3]]),

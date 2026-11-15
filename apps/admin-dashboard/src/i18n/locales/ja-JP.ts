@@ -198,6 +198,7 @@ const jaJP: Messages = {
     },
     form: {
       originalPrice: "定価",
+      costPrice: "原価",
       productDetails: "商品詳細",
       spiceLevel: "辛さ（0〜5）",
       preparationTime: "調理時間（分）",
@@ -1789,6 +1790,69 @@ const jaJP: Messages = {
       expired: "期限切れ",
     },
   },
+  dailyPnl: {
+    title: "日次損益計算書",
+    description:
+      "1日ごとに売上・売上原価・営業費用をまとめ、今日が黒字か赤字かをひと目で確認できます。",
+    date: "日付",
+    noRestaurant: "先に店舗を選択してください。",
+    revenue: {
+      title: "売上",
+      grossSales: "総売上",
+      discount: "割引",
+      refund: "返金",
+      net: "純売上",
+      taxService: "税 {tax}／サービス料 {service} を含む",
+      orders: "{count} 件の注文",
+    },
+    cogs: {
+      title: "売上原価",
+      grossProfit: "粗利益",
+      grossMargin: "粗利率",
+    },
+    expenses: {
+      title: "営業費用",
+      empty: "この日の営業費用はありません",
+      category: "区分",
+      amount: "金額（{symbol}）",
+      note: "メモ（任意）",
+      add: "費用を追加",
+      delete: "費用を削除",
+      deleteTitle: "費用を削除",
+      deleteMessage: "{category}の費用 {amount} を削除しますか？",
+      categories: {
+        labor: "人件費",
+        rent: "家賃",
+        utilities: "水道光熱費",
+        purchase: "仕入",
+        misc: "その他",
+      },
+    },
+    net: {
+      title: "本日の損益",
+      profit: "黒字",
+      loss: "赤字",
+    },
+    warning: {
+      missingCost:
+        "売れた商品のうち {count} 件に原価が未設定のため、粗利が過大に表示される可能性があります",
+      manageMenu: "メニュー管理で原価を設定",
+    },
+    costNote:
+      "売上原価は各商品の「現在の」原価で計算します。原価を変更すると過去の日の粗利も変わります。",
+    toast: {
+      added: "費用を追加しました。",
+      deleted: "費用を削除しました。",
+    },
+    errors: {
+      loadFailed: "損益計算書を読み込めませんでした。もう一度お試しください。",
+      precision: "この通貨の最小単位に合わない金額です。",
+      notFound: "この費用が見つかりません。すでに削除された可能性があります。",
+      addFailed: "費用を追加できませんでした。もう一度お試しください。",
+      deleteFailed: "費用を削除できませんでした。もう一度お試しください。",
+      amountInvalid: "0 より大きい金額を入力してください。",
+    },
+  },
   reviews: {
     title: "お客様レビュー",
     description: "注文と料理への評価を確認し、未返信のレビューに返信します。",
@@ -1914,6 +1978,7 @@ const jaJP: Messages = {
   },
 
   nav: {
+    dailyPnl: "日次損益",
     reviews: "レビュー",
     broadcasts: "プッシュ通知",
     billing: "プランと使用量",
@@ -1966,6 +2031,7 @@ const jaJP: Messages = {
   },
   pages: {
     marketOpenReport: "Open-day report",
+    dailyPnl: "日次損益計算書",
     reviews: "お客様レビュー",
     broadcasts: "プッシュ通知",
     billing: "プランと使用量",

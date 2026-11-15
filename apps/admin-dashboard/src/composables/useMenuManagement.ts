@@ -38,6 +38,7 @@ export interface MenuItemData {
   description?: string | null;
   price: number;
   originalPrice?: number | null;
+  costPrice?: number | null;
   ingredients?: string | null;
   spiceLevel?: number;
   preparationTime?: number;
@@ -426,6 +427,7 @@ export function useMenuManagement() {
       description?: string | null;
       price: number;
       originalPrice?: number | null;
+      costPrice?: number | null;
       ingredients?: string | null;
       spiceLevel?: number;
       preparationTime?: number;

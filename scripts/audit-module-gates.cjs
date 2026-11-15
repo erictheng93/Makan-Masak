@@ -39,6 +39,7 @@ const PROTECTED = [
     "analytics",
     "apps/api/src/features/analytics/routes/index.ts",
   ],
+  ["/pnl/*", "analytics", "apps/api/src/features/pnl/routes/index.ts"],
   [
     "/ai-analytics/*",
     "ai_analytics",

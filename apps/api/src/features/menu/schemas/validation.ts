@@ -210,6 +210,11 @@ const menuItemBaseSchema = z.object({
   ingredients: z.string().max(200).nullish(),
   price: priceSchema,
   originalPrice: priceSchema.nullish(),
+  // Owner-only COGS input. null clears it back to "not set"; 0 is a real cost
+  // (free garnish) and is deliberately not the same thing. Never compared with
+  // price — a loss leader is a legitimate item. Currency alignment is checked
+  // in the DB service with the other money fields.
+  costPrice: z.number().nonnegative().nullish(),
   // The admin form has always collected an English name and filters search on
   // it, but there was no column and no schema field, so it was stripped on
   // every save. Backed by menu_items.name_en as of migration 0076 (#107).

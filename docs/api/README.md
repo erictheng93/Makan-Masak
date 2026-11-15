@@ -39,7 +39,7 @@ Authorization: Bearer <your_jwt_token>
 > 自動生成，請勿手動編輯。執行 `node scripts/check-docs-drift.cjs --write` 重新生成。
 > Source of truth: `apps/api/src/app-factory.ts` 的 `apiV1.route(...)` 掛載點。
 
-共 **60** 個掛載點（全部相對於 `/api/v1`）。
+共 **61** 個掛載點（全部相對於 `/api/v1`）。
 
 | Prefix | Router | 說明 |
 | ------ | ------ | ---- |
@@ -93,6 +93,7 @@ Authorization: Bearer <your_jwt_token>
 | `/markets` | `broadcastsFeature.marketRoutes` |  |
 | `/feedback` | `feedbackFeature.routes` |  |
 | `/alerts` | `alertsFeature.routes` | 店主營運告警 (#285) — admin/owner only |
+| `/pnl` | `pnlFeature.routes` | 日帳損益表 — gated "analytics" inside the router |
 | `/reviews` | `reviewsFeature.routes` | 顧客評價 (#286) — admin/owner only |
 | `/billing` | `billingFeature.routes` |  |
 | `/me` | `meFeature.routes` |  |
@@ -1058,6 +1059,18 @@ so a token can never be replayed against a different room.
 | POST | `/shop-payments/:restaurantId/:provider/connect` | 建立商戶連線與加密儲存密鑰 | Admin / Owner |
 | PUT | `/shop-payments/:restaurantId/:provider` | 更新商戶連線、設定或密鑰 | Admin / Owner |
 | DELETE | `/shop-payments/:restaurantId/:provider` | 中斷商戶連線並移除密鑰 | Admin / Owner |
+
+### Daily P&L (`/pnl`) — 3 routes
+
+日帳損益表。需要認證，僅限平台管理員（role 0）與店主（role 1）；店主只能存取自己的店家（`FORBIDDEN` 403）。與 `/analytics/financial-report` 共用 `analytics` 模組閘門。日期為真實日曆日 `YYYY-MM-DD`；金額為整數 cents。
+
+| Method | Path | Description | Auth |
+| ------ | ---- | ----------- | ---- |
+| GET | `/pnl/:restaurantId/daily?date=YYYY-MM-DD` | 取得單日損益表（省略 `date` 取預設日） | Admin / Owner |
+| POST | `/pnl/:restaurantId/expenses` | 新增支出（`date`、`category`、`amountCents` > 0、選填 `note` ≤ 200 字），回應 201 | Admin / Owner |
+| DELETE | `/pnl/:restaurantId/expenses/:expenseId` | 軟刪除支出；不存在、已刪除或屬於他店皆回 `EXPENSE_NOT_FOUND` 404 | Admin / Owner |
+
+錯誤碼：`VALIDATION_ERROR` 400（日期、類別或金額不合法）、`FORBIDDEN` 403、`RESTAURANT_NOT_FOUND` 404、`EXPENSE_NOT_FOUND` 404。
 
 ### SEO (mounted at `/`) — 2 routes
 

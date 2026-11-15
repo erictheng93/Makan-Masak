@@ -730,6 +730,25 @@
                   />
                 </div>
 
+                <!-- Cost (owner-only; blank = not set, 0 = free) -->
+                <div>
+                  <label
+                    for="menuview-field-cost"
+                    class="block text-[13px] font-semibold text-ios-text mb-1.5"
+                  >
+                    {{ t("menu.form.costPrice") }}
+                  </label>
+                  <input
+                    id="menuview-field-cost"
+                    v-model.number="menuItemForm.costPrice"
+                    data-testid="menu-item-cost-input"
+                    type="number"
+                    :step="inputStep"
+                    min="0"
+                    class="w-full px-4 py-2.5 bg-ios-bg rounded-xl text-[14px] text-ios-text border-0 outline-none focus:ring-2 focus:ring-ios-primary/30 transition-all"
+                  />
+                </div>
+
                 <!-- Category -->
                 <div>
                   <label
@@ -1672,6 +1691,7 @@ const menuItemForm = ref({
   description: "",
   price: 0,
   originalPrice: undefined as number | undefined,
+  costPrice: undefined as number | undefined,
   ingredients: "",
   spiceLevel: 0,
   preparationTime: 15,
@@ -1749,6 +1769,7 @@ const MENU_ITEM_MERGE_FIELDS = [
   { keys: ["description"], label: "menu.form.description" },
   { keys: ["price"], label: "menu.form.price" },
   { keys: ["originalPrice"], label: "menu.form.originalPrice" },
+  { keys: ["costPrice"], label: "menu.form.costPrice" },
   { keys: ["ingredients"], label: "menu.form.ingredients" },
   { keys: ["spiceLevel"], label: "menu.form.spiceLevel" },
   { keys: ["preparationTime"], label: "menu.form.preparationTime" },
@@ -1865,6 +1886,7 @@ const buildMenuItemForm = (item: MenuItemData): MenuItemFormState => ({
   // — one representation, so the baseline/merge diff cannot report a spurious
   // change and the number inputs stay blank rather than rendering a null.
   originalPrice: item.originalPrice ?? undefined,
+  costPrice: item.costPrice ?? undefined,
   ingredients: item.ingredients ?? "",
   spiceLevel: item.spiceLevel ?? 0,
   preparationTime: item.preparationTime ?? 15,
@@ -2122,6 +2144,7 @@ const openAddItemModal = () => {
     description: "",
     price: 0,
     originalPrice: undefined,
+    costPrice: undefined,
     ingredients: "",
     spiceLevel: 0,
     preparationTime: 15,
@@ -2526,6 +2549,11 @@ const submitMenuItem = async () => {
       description: menuItemForm.value.description || null,
       price: Number(menuItemForm.value.price),
       originalPrice: menuItemForm.value.originalPrice || null,
+      // 0 is a real cost; only a blank field ("" from v-model.number) is unset.
+      costPrice:
+        typeof menuItemForm.value.costPrice === "number"
+          ? menuItemForm.value.costPrice
+          : null,
       ingredients: menuItemForm.value.ingredients || null,
       spiceLevel: Number(menuItemForm.value.spiceLevel),
       preparationTime: menuItemForm.value.preparationTime

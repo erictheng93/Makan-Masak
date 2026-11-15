@@ -428,6 +428,32 @@ describe("menu validation schemas", () => {
 // Issue #107: the admin item form and category form have always had an English
 // name input, and item search filters on it, but no column and no schema field
 // existed — so zod stripped it and every save discarded it while returning 2xx.
+describe("menu item costPrice", () => {
+  const base = { categoryId: 1, name: "Tea", price: 4 };
+
+  it("is optional, accepts 0 and null, and survives parsing", () => {
+    expect(createMenuItemSchema.parse(base)).not.toHaveProperty("costPrice");
+    expect(createMenuItemSchema.parse({ ...base, costPrice: 0 })).toMatchObject(
+      { costPrice: 0 },
+    );
+    expect(
+      updateMenuItemSchema.parse({
+        updatedAt: 1_700_000_000_000,
+        costPrice: null,
+      }),
+    ).toMatchObject({ costPrice: null });
+  });
+
+  it("rejects a negative cost but never compares it with price", () => {
+    expect(
+      createMenuItemSchema.safeParse({ ...base, costPrice: -1 }).success,
+    ).toBe(false);
+    expect(
+      createMenuItemSchema.safeParse({ ...base, costPrice: 9 }).success,
+    ).toBe(true);
+  });
+});
+
 describe("English name round-trips through the request schemas (#107)", () => {
   it("keeps nameEn on menu item create and update", () => {
     expect(
@@ -648,12 +674,12 @@ describe("request schemas do not drift from the writable columns", () => {
   const MENU_ITEM_ALIASES: Record<string, string> = {
     price: "priceCents",
     originalPrice: "originalPriceCents",
+    costPrice: "costPriceCents",
   };
 
   const MENU_ITEM_SERVER_OWNED = new Set([
     "id",
     "restaurantId", // comes from the path, not the body
-    "costPriceCents", // internal margin data, never client-set
     "orderCount",
     "rating",
     "reviewCount",
