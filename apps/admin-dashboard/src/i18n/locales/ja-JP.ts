@@ -2127,7 +2127,7 @@ const jaJP: Messages = {
     setupAccount: "パスワードを設定するアカウント",
     setupBtn: "パスワードを設定",
     setupSuccess: "パスワードを設定しました",
-    setupSuccessMessage: "パスワードを設定しました。ログインできます。",
+    setupSuccessMessage: "パスワードの設定が完了しました。ログインできます。",
     newPassword: "新しいパスワード",
     newPasswordPlaceholder: "新しいパスワードを入力（6文字以上）",
     passwordStrength: "パスワード強度：",
@@ -2241,7 +2241,7 @@ const jaJP: Messages = {
       rejected: "却下",
     },
     stats: {
-      total: "現在の絞り込みの申請数",
+      total: "絞り込み結果の申請数",
       pending: "審査待ち",
       rejected: "却下",
     },
