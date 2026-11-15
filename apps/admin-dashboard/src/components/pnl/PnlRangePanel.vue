@@ -1,6 +1,6 @@
 <template>
   <div data-testid="pnl-range">
-    <div class="mb-4 flex flex-wrap items-end gap-3">
+    <div class="pnl-noprint mb-4 flex flex-wrap items-end gap-3">
       <label class="text-[12px] font-medium text-ios-secondary">
         {{ t("dailyPnl.range.from") }}
         <input
@@ -23,15 +23,6 @@
           class="mt-1 block rounded-xl bg-white px-3 py-2 text-[14px] text-ios-text shadow-ios-sm outline-none"
         />
       </label>
-      <button
-        v-if="range"
-        type="button"
-        data-testid="pnl-range-export"
-        class="ml-auto rounded-full bg-ios-blue px-5 py-2 text-[14px] font-semibold text-white transition-colors duration-200"
-        @click="exportCsv"
-      >
-        {{ t("dailyPnl.range.export") }}
-      </button>
     </div>
     <p
       v-if="clamped"
@@ -119,19 +110,19 @@
       </section>
 
       <section class="ui-panel mt-4 rounded-3xl bg-white p-5 shadow-ios-sm">
-        <p class="text-[12px] text-ios-secondary">
+        <p class="pnl-noprint text-[12px] text-ios-secondary">
           {{ t("dailyPnl.range.hint") }}
         </p>
         <!-- The table scrolls inside this box, so the page itself never does. -->
         <div
-          class="mt-2 overflow-x-auto"
+          class="pnl-table-wrap mt-2 overflow-x-auto"
           role="region"
           tabindex="0"
           :aria-label="t('dailyPnl.range.tableLabel')"
         >
           <table
             data-testid="pnl-range-table"
-            class="w-full min-w-[720px] border-separate border-spacing-0 text-[13px]"
+            class="pnl-table w-full min-w-[720px] border-separate border-spacing-0 text-[13px]"
           >
             <thead>
               <tr class="text-left text-ios-secondary">
@@ -233,8 +224,6 @@ import {
   PNL_STATUS_CLASS,
   pnlStatus,
   pnlStatusLabel,
-  buildPnlRangeCsv,
-  downloadCsv,
   formatPnlMoney,
   inclusiveDays,
   shiftDay,
@@ -246,7 +235,11 @@ const props = defineProps<{
   /** Bump to refetch (e.g. after the fee rates changed). */
   refreshKey?: number;
 }>();
-const emit = defineEmits<{ pick: [date: string] }>();
+const emit = defineEmits<{
+  pick: [date: string];
+  /** The range now on screen (null while loading or failed), for export and print. */
+  loaded: [range: PnlRange | null];
+}>();
 
 const { t } = useI18n();
 
@@ -256,6 +249,8 @@ const range = ref<PnlRange | null>(null);
 const isLoading = ref(false);
 const invalid = ref(false);
 const clamped = ref(false);
+
+watch(range, (value) => emit("loaded", value));
 
 const money = (cents: number) =>
   formatPnlMoney(cents, range.value?.currency ?? "TWD");
@@ -280,7 +275,7 @@ const totalLines = computed(() => {
   return [
     {
       id: "netRevenue",
-      label: t("dailyPnl.revenue.net"),
+      label: t("dailyPnl.range.columns.netRevenue"),
       cents: totals.netRevenueCents,
       strong: true,
     },
@@ -361,26 +356,6 @@ watch(
   () => props.refreshKey,
   () => void load(),
 );
-
-function exportCsv(): void {
-  const current = range.value;
-  if (!current) return;
-  downloadCsv(
-    buildPnlRangeCsv(current, {
-      date: t("dailyPnl.range.columns.date"),
-      orders: t("dailyPnl.range.columns.orders"),
-      netRevenue: t("dailyPnl.range.columns.netRevenue"),
-      cogs: t("dailyPnl.range.columns.cogs"),
-      grossProfit: t("dailyPnl.range.columns.grossProfit"),
-      fees: t("dailyPnl.range.columns.fees"),
-      labor: t("dailyPnl.range.columns.labor"),
-      expenses: t("dailyPnl.range.columns.expenses"),
-      netProfit: t("dailyPnl.range.columns.netProfit"),
-      totals: t("dailyPnl.range.totals"),
-    }),
-    `pnl_${current.from}_${current.to}.csv`,
-  );
-}
 
 onMounted(() => void load());
 </script>

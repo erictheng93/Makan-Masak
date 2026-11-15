@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // users.id is a TEXT UUID v7 (#331). These fixtures are deliberately
@@ -253,6 +255,58 @@ describe("useEmployeeList status lookup", () => {
       expect.objectContaining({ username: "newbie", role: 3 }),
     );
     expect(call?.[1].email).toBeUndefined();
+  });
+
+  const wageForm = (hourlyRate?: number | "") => ({
+    username: "newbie",
+    password: "not-a-real-password",
+    fullName: "New Hire",
+    email: "",
+    role: 3,
+    status: "active" as const,
+    ...(hourlyRate === undefined ? {} : { hourlyRate }),
+  });
+
+  it.each<[number | "", number | null]>([
+    [185, 18500],
+    [0, 0],
+    ["", null],
+  ])("sends hourlyRate %j as %j cents on create", async (input, cents) => {
+    apiPost.mockResolvedValue({ data: { success: true } });
+    await useEmployeeList().createUser(wageForm(input));
+
+    const call = apiPost.mock.calls.find(([url]) => url === "/users");
+    expect(call?.[1]).toEqual(
+      expect.objectContaining({ hourlyRateCents: cents }),
+    );
+  });
+
+  it("never sends a wage when the form did not carry one", async () => {
+    apiPost.mockResolvedValue({ data: { success: true } });
+    await useEmployeeList().createUser(wageForm());
+
+    const call = apiPost.mock.calls.find(([url]) => url === "/users");
+    expect(call?.[1]).not.toHaveProperty("hourlyRateCents");
+  });
+
+  it("sends the wage on update and keeps it on the patched row", async () => {
+    apiPut.mockResolvedValue({ data: { success: true } });
+    const list = useEmployeeList();
+    const employee = list.users.value.find((user) => user.id === CHEF)!;
+
+    await list.updateUser(employee, {
+      ...wageForm(200),
+      role: employee.role,
+      status: "active",
+    });
+
+    expect(apiPut).toHaveBeenCalledWith(
+      `/users/${CHEF}`,
+      expect.objectContaining({ hourlyRateCents: 20000 }),
+    );
+    expect(list.users.value.find((u) => u.id === CHEF)?.hourlyRateCents).toBe(
+      20000,
+    );
   });
 });
 

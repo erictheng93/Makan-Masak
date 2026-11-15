@@ -36,6 +36,9 @@ export interface DailyPnl {
     grossSalesCents: number;
     discountCents: number;
     refundCents: number;
+    /** Gross − discount − refund: the figure the analytics revenue report shows. */
+    collectedCents: number;
+    /** Collected − tax, i.e. revenue excluding collected tax. */
     netRevenueCents: number;
     taxCents: number;
     serviceChargeCents: number;
@@ -64,12 +67,25 @@ export interface PnlRates {
   /** Allowed keys; a missing key counts as 0. */
   paymentMethods: string[];
   platforms: string[];
+  /** Start of the version in force today; "1970-01-01" = the legacy version. */
+  effectiveFrom: string | null;
+  /** Every version, newest first. */
+  history: PnlRatesVersion[];
+}
+
+export interface PnlRatesVersion {
+  effectiveFrom: string;
+  paymentFeeBps: Record<string, number>;
+  platformCommissionBps: Record<string, number>;
 }
 
 export type PnlRatesInput = Pick<
   PnlRates,
   "paymentFeeBps" | "platformCommissionBps"
->;
+> & {
+  /** YYYY-MM-DD, not in the future; defaults to today server-side. */
+  effectiveFrom?: string;
+};
 
 export interface PnlRangeRow {
   date: string;
@@ -134,7 +150,7 @@ export const pnlService = {
     return unwrapApiPayload<PnlRates>(response.data);
   },
 
-  /** PUT /api/v1/pnl/:restaurantId/rates — 400 on validation. */
+  /** PUT /api/v1/pnl/:restaurantId/rates — 400 on validation (PNL_RATES_DATE_INVALID, PNL_RATES_TOO_MANY_VERSIONS). */
   async saveRates(
     restaurantId: string,
     rates: PnlRatesInput,

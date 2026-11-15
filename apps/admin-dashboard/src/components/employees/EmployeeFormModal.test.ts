@@ -64,4 +64,71 @@ describe("EmployeeFormModal", () => {
     await wrapper.find("form").trigger("submit");
     expect(wrapper.emitted("save")).toBeUndefined();
   });
+
+  describe("hourly wage", () => {
+    const employee = {
+      id: "u1",
+      username: "amy",
+      fullName: "Amy",
+      email: "",
+      role: 3,
+      status: "active" as const,
+      isActive: true,
+      lastLoginAt: null,
+      createdAt: "2026-01-01",
+    };
+
+    async function openEdit(
+      extra: Record<string, unknown>,
+      canEditWage = true,
+    ) {
+      const wrapper = mountModal({ isOpen: false, canEditWage });
+      await wrapper.setProps({
+        isOpen: true,
+        employee: { ...employee, ...extra },
+      });
+      return wrapper;
+    }
+
+    it("is hidden, and not emitted, for viewers who cannot edit it", async () => {
+      const wrapper = await openEdit({ hourlyRateCents: 18000 }, false);
+      expect(
+        wrapper.find('[data-testid="employee-hourly-rate"]').exists(),
+      ).toBe(false);
+      await wrapper.find("form").trigger("submit");
+      expect(wrapper.emitted("save")![0][0]).not.toHaveProperty("hourlyRate");
+    });
+
+    it("loads the stored wage in major units", async () => {
+      const wrapper = await openEdit({ hourlyRateCents: 18500 });
+      const input = wrapper.find('[data-testid="employee-hourly-rate"]');
+      expect((input.element as HTMLInputElement).value).toBe("185");
+      expect(input.attributes("step")).toBe("1");
+    });
+
+    it("keeps blank as blank and 0 as 0", async () => {
+      const blank = await openEdit({ hourlyRateCents: null });
+      await blank.find("form").trigger("submit");
+      expect(blank.emitted("save")![0][0]).toMatchObject({ hourlyRate: "" });
+
+      const zero = await openEdit({ hourlyRateCents: 0 });
+      expect(
+        (
+          zero.find('[data-testid="employee-hourly-rate"]')
+            .element as HTMLInputElement
+        ).value,
+      ).toBe("0");
+      await zero.find("form").trigger("submit");
+      expect(zero.emitted("save")![0][0]).toMatchObject({ hourlyRate: 0 });
+    });
+
+    it("emits what the owner types", async () => {
+      const wrapper = await openEdit({ hourlyRateCents: null });
+      await wrapper
+        .find('[data-testid="employee-hourly-rate"]')
+        .setValue("190");
+      await wrapper.find("form").trigger("submit");
+      expect(wrapper.emitted("save")![0][0]).toMatchObject({ hourlyRate: 190 });
+    });
+  });
 });

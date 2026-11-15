@@ -1911,6 +1911,14 @@ const idID: Messages = {
     },
   },
   dailyPnl: {
+    export: {
+      label: "Ekspor",
+      csv: "CSV",
+      excel: "Excel",
+      print: "Cetak",
+      item: "Item",
+      amount: "Jumlah",
+    },
     mode: { label: "Tampilan", day: "Harian", range: "Rentang" },
     fees: {
       payment: "Biaya pembayaran (perkiraan)",
@@ -1920,7 +1928,9 @@ const idID: Messages = {
     },
     labor: {
       title: "Tenaga kerja (jadwal shift)",
-      missingRate: "{count} shift belum punya upah per jam dan tidak dihitung",
+      missingRate:
+        "{count} shift tidak punya upah pada karyawan maupun tarif pada templat shift sehingga tidak dihitung",
+      setWage: "Atur upah di Manajemen Karyawan",
       expenseNote:
         "Upah staf terjadwal sudah dihitung otomatis di Tenaga kerja. Gunakan kategori biaya Tenaga kerja hanya untuk upah di luar jadwal agar tidak dihitung ganda.",
     },
@@ -1930,13 +1940,24 @@ const idID: Messages = {
       paymentMethods: "Tarif biaya pembayaran",
       platforms: "Komisi platform pengiriman",
       save: "Simpan tarif",
-      appliesToPast:
-        "Tarif berlaku juga untuk hari-hari sebelumnya, sehingga laporan lama ikut berubah.",
       loadFailed: "Tidak dapat memuat tarif biaya. Silakan coba lagi.",
       saveFailed: "Tidak dapat menyimpan tarif biaya. Silakan coba lagi.",
       invalid: "Tarif harus antara 0 dan 100, maksimal dua desimal.",
       saved: "Tarif biaya disimpan.",
       close: "Tutup",
+      appliesFromDate:
+        "Tarif berlaku mulai tanggal efektif; hari-hari sebelumnya tetap memakai tarif lamanya.",
+      effectiveFrom: "Berlaku mulai",
+      history: "Riwayat",
+      historyHint:
+        "Pilih satu entri untuk memuatnya ke formulir; menyimpan akan menggantikan versi pada tanggal itu.",
+      fromStart: "Dari awal",
+      allZero: "Semua 0%",
+      dateInvalid: "Tanggal berlaku tidak boleh di masa depan.",
+      tooManyVersions:
+        "Versi tarif dibatasi 60; pakai kembali tanggal berlaku yang ada.",
+      conflict:
+        "Tarif baru saja diperbarui oleh orang lain. Formulir telah dimuat ulang, silakan coba lagi.",
       methods: {
         cash: "Tunai",
         card: "Kartu Kredit",
@@ -1966,12 +1987,11 @@ const idID: Messages = {
         "Rentang tanggal tidak valid: maksimal 92 hari dan tidak boleh di masa depan.",
       totals: "Total rentang",
       hint: "Pilih satu hari untuk membuka laporan harian.",
-      export: "Ekspor CSV",
       tableLabel: "Rincian laba rugi harian",
       columns: {
         date: "Tanggal",
         orders: "Pesanan",
-        netRevenue: "Pendapatan bersih",
+        netRevenue: "Pendapatan bersih (di luar pajak)",
         cogs: "HPP",
         grossProfit: "Laba kotor",
         fees: "Biaya & komisi",
@@ -1991,7 +2011,12 @@ const idID: Messages = {
       discount: "Diskon",
       refund: "Pengembalian dana",
       net: "Pendapatan bersih",
-      taxService: "Termasuk pajak {tax} / biaya layanan {service}",
+      collected: "Jumlah diterima",
+      tax: "Pajak dipungut",
+      netExTax: "Pendapatan bersih (di luar pajak)",
+      collectedNote:
+        "Jumlah diterima sama dengan pendapatan yang tampil di Analitik.",
+      serviceMemo: "Termasuk biaya layanan {service}",
       orders: "{count} pesanan",
     },
     cogs: {
@@ -2037,6 +2062,7 @@ const idID: Messages = {
     },
     errors: {
       loadFailed: "Tidak dapat memuat laporan. Silakan coba lagi.",
+      exportFailed: "Ekspor gagal, silakan coba lagi.",
       precision: "Jumlah itu bukan kelipatan satuan terkecil mata uang ini.",
       notFound: "Biaya tidak ditemukan, mungkin sudah dihapus.",
       addFailed: "Tidak dapat menambah biaya. Silakan coba lagi.",
@@ -4165,6 +4191,9 @@ const idID: Messages = {
         "Karyawan yang dihapus muncul di sini dan bisa dipulihkan kapan saja.",
     },
     modal: {
+      hourlyRateLabel: "Upah per jam ({symbol}, opsional)",
+      hourlyRateHint:
+        "Dipakai untuk biaya tenaga kerja di laba rugi; kosongkan untuk memakai tarif templat shift.",
       editTitle: "Edit Karyawan",
       addTitle: "Tambah Karyawan",
       usernameLabel: "Username",
@@ -4224,6 +4253,8 @@ const idID: Messages = {
       createdSignIn: "Karyawan dibuat. Mereka masuk melalui {url}",
     },
     errors: {
+      hourlyRatePrecision:
+        "Upah per jam tidak sesuai satuan terkecil mata uang ini.",
       saveFailed: "Gagal menyimpan",
       resetFailed: "Gagal mereset kata sandi",
       toggleFailed: "Gagal mengubah status",

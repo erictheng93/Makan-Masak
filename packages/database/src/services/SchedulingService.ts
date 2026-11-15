@@ -86,6 +86,8 @@ export interface EmployeeSchedule {
   scheduledHours: number;
   actualHours: number;
   overtimeHours: number;
+  /** Wage snapshot taken on completion. Salary data: strip before serving non-managers. */
+  hourlyRateCents?: number | null;
   status: "scheduled" | "confirmed" | "completed" | "cancelled" | "no_show";
   notes: string | null;
   managerNotes: string | null;
@@ -354,6 +356,31 @@ export class SchedulingService extends BaseService {
           eq(employeeSchedules.id, id),
           eq(employeeSchedules.restaurantId, restaurantId),
         );
+  }
+
+  /**
+   * Wage to snapshot onto a schedule as it completes: the employee's own
+   * `users.hourly_rate_cents`, else the shift template's, else null. Read at
+   * that moment, so later wage edits never rewrite completed shifts.
+   */
+  private async resolveHourlyRateCents(
+    employeeId: string,
+    restaurantId: string,
+    shiftTemplateId: number | null,
+  ): Promise<number | null> {
+    const [employee] = await this.db
+      .select({ rate: users.hourlyRateCents })
+      .from(users)
+      .where(eq(users.id, employeeId))
+      .limit(1);
+    if (employee?.rate != null) return employee.rate;
+    if (shiftTemplateId == null) return null;
+    const [template] = await this.db
+      .select({ rate: shiftTemplates.hourlyRateCents })
+      .from(shiftTemplates)
+      .where(this.templateWhere(shiftTemplateId, restaurantId))
+      .limit(1);
+    return template?.rate ?? null;
   }
 
   private conflictWhere(id: number, restaurantId?: string) {
@@ -715,9 +742,34 @@ export class SchedulingService extends BaseService {
       }
     }
 
+    // The wage snapshot is written only by completion paths, never by callers.
+    const { hourlyRateCents: _ignored, ...safeData } = data;
+    const patch: Partial<typeof employeeSchedules.$inferInsert> = {
+      ...safeData,
+    };
+    if (safeData.status === "completed") {
+      const [current] = await this.db
+        .select({
+          employeeId: employeeSchedules.employeeId,
+          restaurantId: employeeSchedules.restaurantId,
+          shiftTemplateId: employeeSchedules.shiftTemplateId,
+          hourlyRateCents: employeeSchedules.hourlyRateCents,
+        })
+        .from(employeeSchedules)
+        .where(this.scheduleWhere(id, restaurantId))
+        .limit(1);
+      if (current && current.hourlyRateCents == null) {
+        patch.hourlyRateCents = await this.resolveHourlyRateCents(
+          current.employeeId,
+          current.restaurantId,
+          safeData.shiftTemplateId ?? current.shiftTemplateId,
+        );
+      }
+    }
+
     const [updated] = await this.db
       .update(employeeSchedules)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...patch, updatedAt: new Date() })
       .where(this.scheduleWhere(id, restaurantId))
       .returning();
 
@@ -1000,12 +1052,19 @@ export class SchedulingService extends BaseService {
       (data.clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60);
     const overtimeHours = Math.max(0, actualHours - schedule.scheduledHours);
 
+    const hourlyRateCents = await this.resolveHourlyRateCents(
+      schedule.employeeId,
+      schedule.restaurantId,
+      schedule.shiftTemplateId,
+    );
+
     const [updated] = await this.db
       .update(employeeSchedules)
       .set({
         clockOutTime: data.clockOutTime,
         actualHours,
         overtimeHours,
+        hourlyRateCents,
         status: "completed",
         notes: data.notes || schedule.notes,
         updatedAt: new Date(),

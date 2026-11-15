@@ -16,6 +16,8 @@ export interface Employee {
   lastLoginAt: string | null;
   createdAt: string;
   profileImageUrl?: string;
+  /** Owner/admin only: absent for every other viewer; null = not set. */
+  hourlyRateCents?: number | null;
 }
 
 export interface EmployeeWithStatus extends Employee {
@@ -40,6 +42,8 @@ export interface EmployeeFormData {
   role: number | null;
   /** The API has no suspended state; employee status is active or inactive. */
   status: "active" | "inactive";
+  /** Major units; "" = not set. Left undefined when the viewer cannot edit it. */
+  hourlyRate?: number | "";
 }
 
 export interface LeaveBalance {

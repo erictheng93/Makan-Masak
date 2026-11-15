@@ -1793,6 +1793,14 @@ const viVN: Messages = {
     },
   },
   dailyPnl: {
+    export: {
+      label: "Xuất",
+      csv: "CSV",
+      excel: "Excel",
+      print: "In",
+      item: "Mục",
+      amount: "Số tiền",
+    },
     mode: { label: "Chế độ xem", day: "Một ngày", range: "Khoảng ngày" },
     fees: {
       payment: "Phí thanh toán (ước tính)",
@@ -1802,7 +1810,9 @@ const viVN: Messages = {
     },
     labor: {
       title: "Nhân công (theo ca)",
-      missingRate: "{count} ca chưa có lương theo giờ nên không được tính",
+      missingRate:
+        "{count} ca không có lương theo giờ ở nhân viên lẫn mẫu ca nên không được tính",
+      setWage: "Đặt lương trong Quản lý nhân viên",
       expenseNote:
         "Lương của nhân viên theo ca đã được tự động tính vào Nhân công. Chỉ dùng nhóm chi phí Nhân sự cho lương ngoài lịch ca để tránh tính trùng.",
     },
@@ -1812,13 +1822,24 @@ const viVN: Messages = {
       paymentMethods: "Tỷ lệ phí thanh toán",
       platforms: "Hoa hồng nền tảng giao hàng",
       save: "Lưu tỷ lệ",
-      appliesToPast:
-        "Tỷ lệ áp dụng cho cả các ngày trước, nên báo cáo cũ cũng sẽ thay đổi.",
       loadFailed: "Không thể tải tỷ lệ phí. Vui lòng thử lại.",
       saveFailed: "Không thể lưu tỷ lệ phí. Vui lòng thử lại.",
       invalid: "Tỷ lệ phải từ 0 đến 100, tối đa hai chữ số thập phân.",
       saved: "Đã lưu tỷ lệ phí.",
       close: "Đóng",
+      appliesFromDate:
+        "Mức phí áp dụng từ ngày hiệu lực trở đi; các ngày trước đó giữ mức phí cũ.",
+      effectiveFrom: "Ngày hiệu lực",
+      history: "Lịch sử",
+      historyHint:
+        "Chọn một mục để nạp vào biểu mẫu; khi lưu sẽ thay thế phiên bản cùng ngày.",
+      fromStart: "Từ ban đầu",
+      allZero: "Tất cả 0%",
+      dateInvalid: "Ngày hiệu lực không được ở tương lai.",
+      tooManyVersions:
+        "Tối đa 60 phiên bản mức phí; hãy dùng lại một ngày hiệu lực đã có.",
+      conflict:
+        "Mức phí vừa được người khác cập nhật. Biểu mẫu đã được tải lại, vui lòng thử lại.",
       methods: {
         cash: "Tiền mặt",
         card: "Thẻ tín dụng",
@@ -1848,12 +1869,11 @@ const viVN: Messages = {
         "Khoảng ngày không hợp lệ: tối đa 92 ngày và không được ở tương lai.",
       totals: "Tổng khoảng ngày",
       hint: "Chọn một ngày để xem báo cáo ngày đó.",
-      export: "Xuất CSV",
       tableLabel: "Chi tiết lãi lỗ theo ngày",
       columns: {
         date: "Ngày",
         orders: "Đơn hàng",
-        netRevenue: "Doanh thu ròng",
+        netRevenue: "Doanh thu thuần (chưa gồm thuế)",
         cogs: "Giá vốn",
         grossProfit: "Lợi nhuận gộp",
         fees: "Phí & hoa hồng",
@@ -1873,7 +1893,11 @@ const viVN: Messages = {
       discount: "Giảm giá",
       refund: "Hoàn tiền",
       net: "Doanh thu thuần",
-      taxService: "Đã gồm thuế {tax} / phí dịch vụ {service}",
+      collected: "Số tiền đã thu",
+      tax: "Thuế đã thu hộ",
+      netExTax: "Doanh thu thuần (chưa gồm thuế)",
+      collectedNote: "Số tiền đã thu là doanh thu hiển thị trong Phân tích.",
+      serviceMemo: "Đã gồm phí dịch vụ {service}",
       orders: "{count} đơn hàng",
     },
     cogs: {
@@ -1919,6 +1943,7 @@ const viVN: Messages = {
     },
     errors: {
       loadFailed: "Không thể tải báo cáo. Vui lòng thử lại.",
+      exportFailed: "Xuất thất bại, vui lòng thử lại.",
       precision: "Số tiền không đúng đơn vị nhỏ nhất của loại tiền này.",
       notFound: "Không tìm thấy khoản chi này, có thể đã bị xóa.",
       addFailed: "Không thể thêm chi phí. Vui lòng thử lại.",
@@ -4144,6 +4169,9 @@ const viVN: Messages = {
         "Nhân viên bị gỡ sẽ xuất hiện ở đây và có thể khôi phục bất cứ lúc nào.",
     },
     modal: {
+      hourlyRateLabel: "Lương theo giờ ({symbol}, tùy chọn)",
+      hourlyRateHint:
+        "Dùng cho chi phí nhân sự trong báo cáo lãi lỗ; để trống sẽ dùng mức của mẫu ca.",
       editTitle: "Chỉnh sửa nhân viên",
       addTitle: "Thêm nhân viên",
       usernameLabel: "Tên đăng nhập",
@@ -4203,6 +4231,8 @@ const viVN: Messages = {
       createdSignIn: "Đã tạo nhân viên. Họ đăng nhập tại {url}",
     },
     errors: {
+      hourlyRatePrecision:
+        "Lương theo giờ không khớp đơn vị nhỏ nhất của loại tiền này.",
       saveFailed: "Lưu thất bại",
       resetFailed: "Đặt lại mật khẩu thất bại",
       toggleFailed: "Chuyển đổi trạng thái thất bại",

@@ -1791,6 +1791,14 @@ const jaJP: Messages = {
     },
   },
   dailyPnl: {
+    export: {
+      label: "出力",
+      csv: "CSV",
+      excel: "Excel",
+      print: "印刷",
+      item: "項目",
+      amount: "金額",
+    },
     mode: { label: "表示", day: "日次", range: "期間" },
     fees: {
       payment: "決済手数料（概算）",
@@ -1800,7 +1808,9 @@ const jaJP: Messages = {
     },
     labor: {
       title: "人件費（シフト）",
-      missingRate: "{count} 件のシフトに時給がないため含まれていません",
+      missingRate:
+        "{count} 件のシフトは従業員にもシフトテンプレートにも時給がないため含まれていません",
+      setWage: "従業員管理で時給を設定",
       expenseNote:
         "シフト勤務者の給与は「人件費」に自動計上されています。「人件費」カテゴリにはシフト外の給与のみを入力し、二重計上を避けてください。",
     },
@@ -1810,13 +1820,24 @@ const jaJP: Messages = {
       paymentMethods: "決済手数料率",
       platforms: "配達プラットフォーム手数料",
       save: "保存",
-      appliesToPast:
-        "手数料率は過去の日付にも適用され、過去の損益表も変わります。",
       loadFailed: "手数料率を読み込めませんでした。もう一度お試しください。",
       saveFailed: "手数料率を保存できませんでした。もう一度お試しください。",
       invalid: "手数料率は 0〜100、小数点以下は 2 桁までです。",
       saved: "手数料率を保存しました。",
       close: "閉じる",
+      appliesFromDate:
+        "料率は適用開始日以降に適用され、それ以前の日は当時の料率のままです。",
+      effectiveFrom: "適用開始日",
+      history: "履歴",
+      historyHint:
+        "項目を選ぶとフォームに読み込まれます。保存すると同じ日付のバージョンを置き換えます。",
+      fromStart: "最初から",
+      allZero: "すべて 0%",
+      dateInvalid: "適用開始日に未来の日付は指定できません。",
+      tooManyVersions:
+        "料率バージョンは最大 60 件です。既存の適用開始日を使ってください。",
+      conflict:
+        "料率がほかのユーザーにより更新されました。フォームを再読み込みしたので、もう一度お試しください。",
       methods: {
         cash: "現金",
         card: "クレジットカード",
@@ -1847,12 +1868,11 @@ const jaJP: Messages = {
         "日付の範囲が無効です。最長 92 日で、未来の日付は指定できません。",
       totals: "期間合計",
       hint: "日付を選ぶとその日の損益表を表示します。",
-      export: "CSV を出力",
       tableLabel: "日別損益の内訳",
       columns: {
         date: "日付",
         orders: "注文数",
-        netRevenue: "純売上",
+        netRevenue: "純売上（税抜）",
         cogs: "売上原価",
         grossProfit: "粗利",
         fees: "手数料・コミッション合計",
@@ -1872,7 +1892,11 @@ const jaJP: Messages = {
       discount: "割引",
       refund: "返金",
       net: "純売上",
-      taxService: "税 {tax}／サービス料 {service} を含む",
+      collected: "受取金額",
+      tax: "預り税額",
+      netExTax: "純売上（税抜）",
+      collectedNote: "受取金額は「分析」に表示される売上と同じ値です。",
+      serviceMemo: "サービス料 {service} を含む",
       orders: "{count} 件の注文",
     },
     cogs: {
@@ -1918,6 +1942,7 @@ const jaJP: Messages = {
     },
     errors: {
       loadFailed: "損益計算書を読み込めませんでした。もう一度お試しください。",
+      exportFailed: "出力に失敗しました。もう一度お試しください。",
       precision: "この通貨の最小単位に合わない金額です。",
       notFound: "この費用が見つかりません。すでに削除された可能性があります。",
       addFailed: "費用を追加できませんでした。もう一度お試しください。",
@@ -4150,6 +4175,9 @@ const jaJP: Messages = {
         "削除した従業員はここに表示され、いつでも復帰させられます。",
     },
     modal: {
+      hourlyRateLabel: "時給（{symbol}、任意）",
+      hourlyRateHint:
+        "損益の人件費に使います。空欄の場合はシフトテンプレートの時給を使います。",
       editTitle: "従業員編集",
       addTitle: "従業員追加",
       usernameLabel: "ユーザー名",
@@ -4209,6 +4237,7 @@ const jaJP: Messages = {
       createdSignIn: "従業員を追加しました。サインインは {url} から",
     },
     errors: {
+      hourlyRatePrecision: "時給がこの通貨の最小単位に合っていません。",
       saveFailed: "保存に失敗しました",
       resetFailed: "パスワードリセットに失敗しました",
       toggleFailed: "ステータスの切り替えに失敗しました",

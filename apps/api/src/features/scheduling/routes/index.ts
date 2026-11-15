@@ -38,6 +38,20 @@ function isManager(role: number): boolean {
   return role === USER_ROLES.ADMIN || role === USER_ROLES.OWNER;
 }
 
+/**
+ * The per-shift wage snapshot is for owners and admins. Roles 2-4 read their
+ * own schedules, so strip it. The embedded shift template (and its rate) was
+ * already visible to staff before the snapshot existed, so it stays.
+ */
+function redactWage<T extends object>(role: number, row: T): T {
+  if (isManager(role)) return row;
+  const { hourlyRateCents: _snapshot, ...rest } = row as Record<
+    string,
+    unknown
+  >;
+  return rest as T;
+}
+
 function userIdString(user: { id: string | number }): string {
   return String(user.id);
 }
@@ -224,7 +238,7 @@ app.get(
     return c.json(
       {
         success: true,
-        data: result.items,
+        data: result.items.map((item) => redactWage(user.role, item)),
         pagination: {
           page: query.page,
           limit: query.limit,
@@ -260,7 +274,10 @@ app.get(
       }
     }
 
-    return c.json(createSuccessResponse(schedule), HTTP_STATUS.OK);
+    return c.json(
+      createSuccessResponse(redactWage(user.role, schedule)),
+      HTTP_STATUS.OK,
+    );
   },
 );
 
@@ -421,7 +438,10 @@ app.post(
     });
 
     return c.json(
-      createSuccessResponse(schedule, "Clocked in successfully"),
+      createSuccessResponse(
+        redactWage(user.role, schedule),
+        "Clocked in successfully",
+      ),
       HTTP_STATUS.OK,
     );
   },
@@ -464,7 +484,10 @@ app.post(
     });
 
     return c.json(
-      createSuccessResponse(schedule, "Clocked out successfully"),
+      createSuccessResponse(
+        redactWage(user.role, schedule),
+        "Clocked out successfully",
+      ),
       HTTP_STATUS.OK,
     );
   },

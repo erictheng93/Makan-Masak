@@ -24,6 +24,7 @@ import {
   restaurants,
   revenueReportableOrder,
   shiftTemplates,
+  users,
   type ExpenseCategory,
 } from "@makanmasak/database";
 import { ORDER_PAYMENT_METHODS } from "@makanmasak/shared-types";
@@ -31,7 +32,11 @@ import {
   assertCurrencyAlignedCents,
   roundToCurrencyCents,
 } from "@makanmasak/utils";
-import { badRequest, notFound } from "../../../shared/utils/api-error";
+import {
+  badRequest,
+  conflict,
+  notFound,
+} from "../../../shared/utils/api-error";
 import {
   currencyFromRestaurantSettings,
   displayCurrencyFromRestaurantSettings,
@@ -42,13 +47,27 @@ import type { Env } from "../../../types/env";
 export const PNL_PAYMENT_METHODS = ORDER_PAYMENT_METHODS;
 export const PNL_PLATFORMS = Object.values(PLATFORM_TYPES);
 export const PNL_MAX_RANGE_DAYS = 92;
+export const PNL_MAX_RATE_VERSIONS = 60;
 const DAY_MS = 86_400_000;
+/** What a legacy `{ paymentFeeBps, platformCommissionBps }` reads as: in force since forever. */
+const LEGACY_EFFECTIVE_FROM = "1970-01-01";
 
-export interface PnlRates {
+interface RateSet {
   paymentFeeBps: Record<string, number>;
   platformCommissionBps: Record<string, number>;
+}
+
+export interface RateVersion extends RateSet {
+  effectiveFrom: string;
+}
+
+export interface PnlRates extends RateSet {
   paymentMethods: string[];
   platforms: string[];
+  /** Of the version in force today; null when none is. */
+  effectiveFrom: string | null;
+  /** Every version, newest first. */
+  history: RateVersion[];
 }
 
 export interface ExpenseView {
@@ -63,6 +82,8 @@ export interface DailyPnl {
   date: string;
   currency: string;
   revenue: {
+    /** What customers paid less refunds, tax included; matches the analytics revenue report. */
+    collectedCents: number;
     grossSalesCents: number;
     discountCents: number;
     refundCents: number;
@@ -113,6 +134,7 @@ interface DayAgg {
   total: number;
   discount: number;
   refund: number;
+  /** Tax retained after refunds; a real sum until rounded once per day. */
   tax: number;
   service: number;
   paymentFee: number;
@@ -142,7 +164,9 @@ const emptyDay = (): DayAgg => ({
   expenses: [],
 });
 
-const net = (d: DayAgg) => d.total - d.refund;
+const collected = (d: DayAgg) => d.total - d.refund;
+// Tax is collected for the tax authority, not earned; service charge is earned.
+const net = (d: DayAgg) => collected(d) - d.tax;
 const gross = (d: DayAgg) => net(d) - d.cogs;
 const expenseTotal = (d: DayAgg) =>
   d.expenses.reduce((sum, e) => sum + e.amountCents, 0);
@@ -154,24 +178,26 @@ const isBps = (value: unknown): value is number =>
   (value as number) >= 0 &&
   (value as number) <= 10_000;
 
+const asMap = (map: unknown) =>
+  map && typeof map === "object" && !Array.isArray(map)
+    ? (map as Record<string, unknown>)
+    : {};
+
+const isRealDate = (value: unknown): value is string =>
+  typeof value === "string" &&
+  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  new Date(`${value}T00:00:00Z`).toISOString().startsWith(value);
+
 /**
- * Stored rates; invalid values read as 0. Payment keys are open (orders carry
+ * One rate set; invalid values read as 0. Payment keys are open (orders carry
  * free-text methods such as "split" or a gateway name), platform keys fixed.
  */
-function readRates(
-  settings: unknown,
-): Omit<PnlRates, "paymentMethods" | "platforms"> {
-  const raw =
-    settings && typeof settings === "object"
-      ? (settings as { pnlRates?: Record<string, unknown> }).pnlRates
-      : undefined;
-  const asMap = (map: unknown) =>
-    map && typeof map === "object" ? (map as Record<string, unknown>) : {};
-  const platform = asMap(raw?.platformCommissionBps);
+function normalizeRates(raw: Record<string, unknown>): RateSet {
+  const platform = asMap(raw.platformCommissionBps);
   return {
     paymentFeeBps: Object.fromEntries([
       ...PNL_PAYMENT_METHODS.map((key) => [key, 0]),
-      ...Object.entries(asMap(raw?.paymentFeeBps)).filter(([, v]) => isBps(v)),
+      ...Object.entries(asMap(raw.paymentFeeBps)).filter(([, v]) => isBps(v)),
     ]),
     platformCommissionBps: Object.fromEntries(
       PNL_PLATFORMS.map((key) => [
@@ -181,6 +207,44 @@ function readRates(
     ),
   };
 }
+
+/**
+ * `settings.pnlRates` as versions, oldest first. The legacy shape (no
+ * `versions`) is one version in force since 1970; a malformed entry is skipped.
+ */
+function readVersions(settings: unknown): RateVersion[] {
+  const raw = asMap(asMap(settings).pnlRates);
+  const list = Array.isArray(raw.versions)
+    ? raw.versions
+    : "paymentFeeBps" in raw || "platformCommissionBps" in raw
+      ? [{ ...raw, effectiveFrom: LEGACY_EFFECTIVE_FROM }]
+      : [];
+  const byDate = new Map<string, RateVersion>();
+  for (const entry of list) {
+    const v = asMap(entry);
+    if (!isRealDate(v.effectiveFrom)) continue;
+    byDate.set(v.effectiveFrom, {
+      effectiveFrom: v.effectiveFrom,
+      ...normalizeRates(v),
+    });
+  }
+  return [...byDate.values()].sort((a, b) =>
+    a.effectiveFrom.localeCompare(b.effectiveFrom),
+  );
+}
+
+/** The version with the greatest effectiveFrom <= date; undefined before the first. */
+const versionAt = (versions: RateVersion[], date: string) =>
+  [...versions].reverse().find((v) => v.effectiveFrom <= date);
+
+const ZERO_RATES = normalizeRates({});
+
+const hasRates = (rates: RateSet | undefined) =>
+  !!rates &&
+  [
+    ...Object.values(rates.paymentFeeBps),
+    ...Object.values(rates.platformCommissionBps),
+  ].some((bps) => bps > 0);
 
 function datesBetween(from: string, to: string): string[] {
   const days: string[] = [];
@@ -210,6 +274,10 @@ export class PnlService {
       .select({
         settings: restaurants.settings,
         timezone: restaurants.timezone,
+        // The stored text, for the compare-and-set in setRates.
+        pnlRatesJson: sql<
+          string | null
+        >`json_extract(${restaurants.settings}, '$.pnlRates')`,
       })
       .from(restaurants)
       .where(eq(restaurants.id, restaurantId))
@@ -219,7 +287,12 @@ export class PnlService {
     const today = new Date(this.now() + offsetMinutes * 60_000)
       .toISOString()
       .slice(0, 10);
-    return { settings: row.settings, offsetMinutes, today };
+    return {
+      settings: row.settings,
+      pnlRatesJson: row.pnlRatesJson,
+      offsetMinutes,
+      today,
+    };
   }
 
   /**
@@ -233,11 +306,7 @@ export class PnlService {
     to: string,
   ) {
     const currency = displayCurrencyFromRestaurantSettings(shop.settings);
-    const rates = readRates(shop.settings);
-    const configured = [
-      ...Object.values(rates.paymentFeeBps),
-      ...Object.values(rates.platformCommissionBps),
-    ].some((bps) => bps > 0);
+    const versions = readVersions(shop.settings);
 
     // Same order set and day attribution (orders.created_at_ms cut at the shop
     // offset) as the analytics revenue report, so the two figures agree.
@@ -275,7 +344,8 @@ export class PnlService {
             total: sql<number>`coalesce(sum(coalesce(${orders.totalAmountCents}, 0)), 0)`,
             discount: sql<number>`coalesce(sum(coalesce(${orders.discountAmountCents}, 0)), 0)`,
             refund: sql<number>`coalesce(sum(${refund}), 0)`,
-            tax: sql<number>`coalesce(sum(coalesce(${orders.taxAmountCents}, 0)), 0)`,
+            // Per order, tax x (total - refund) / total, kept in [0, tax]; rounded per day below.
+            tax: sql<number>`coalesce(sum(case when coalesce(${orders.totalAmountCents}, 0) > 0 then max(0, min(coalesce(${orders.taxAmountCents}, 0), coalesce(${orders.taxAmountCents}, 0) * 1.0 * (${orderNet}) / ${orders.totalAmountCents})) else 0 end), 0)`,
             service: sql<number>`coalesce(sum(coalesce(${orders.serviceChargeCents}, 0)), 0)`,
           })
           .from(orders)
@@ -298,7 +368,10 @@ export class PnlService {
             day: employeeSchedules.workDate,
             actualHours: employeeSchedules.actualHours,
             overtimeHours: employeeSchedules.overtimeHours,
-            rate: shiftTemplates.hourlyRateCents,
+            // Clock-out snapshot, else the employee's wage, else the template's.
+            rate: sql<
+              number | null
+            >`coalesce(${employeeSchedules.hourlyRateCents}, ${users.hourlyRateCents}, ${shiftTemplates.hourlyRateCents})`,
             multiplier: shiftTemplates.overtimeMultiplier,
           })
           .from(employeeSchedules)
@@ -309,6 +382,7 @@ export class PnlService {
               eq(shiftTemplates.restaurantId, employeeSchedules.restaurantId),
             ),
           )
+          .leftJoin(users, eq(users.id, employeeSchedules.employeeId))
           .where(
             and(
               eq(employeeSchedules.restaurantId, restaurantId),
@@ -354,6 +428,7 @@ export class PnlService {
 
     for (const g of orderGroups) {
       const d = at(g.day);
+      const rates = versionAt(versions, g.day) ?? ZERO_RATES;
       d.orderCount += g.count;
       d.total += g.total;
       d.discount += g.discount;
@@ -367,6 +442,8 @@ export class PnlService {
         g.orderSource,
       );
     }
+    for (const d of byDay.values())
+      d.tax = roundToCurrencyCents(d.tax, currency);
     for (const g of cogsGroups) {
       at(g.day).cogs += g.total;
       at(g.day).itemsMissingCost += g.missing;
@@ -389,13 +466,13 @@ export class PnlService {
     for (const row of expenseRows)
       at(row.businessDate).expenses.push(toView(row));
 
-    return { currency, configured, byDay };
+    return { currency, versions, byDay };
   }
 
   async getDaily(restaurantId: string, date?: string): Promise<DailyPnl> {
     const shop = await this.loadRestaurant(restaurantId);
     const day = date ?? shop.today;
-    const { currency, configured, byDay } = await this.aggregate(
+    const { currency, versions, byDay } = await this.aggregate(
       shop,
       restaurantId,
       day,
@@ -411,11 +488,12 @@ export class PnlService {
       );
     }
 
-    // shortcut: lines sold before migration 0047 have no cost snapshot and fall back to the item's CURRENT cost, and fee rates are today's rates, not the rates in force that day; upgrade = rate history if owners change rates often.
+    // shortcut: lines sold before migration 0047 have no cost snapshot and fall back to the item's CURRENT cost, and shifts clocked out before 0048 cost at the CURRENT wage; upgrade = backfill if that matters.
     return {
       date: day,
       currency,
       revenue: {
+        collectedCents: collected(d),
         grossSalesCents: d.total + d.discount,
         discountCents: d.discount,
         refundCents: d.refund,
@@ -429,7 +507,7 @@ export class PnlService {
       fees: {
         paymentFeeCents: d.paymentFee,
         platformCommissionCents: d.platformCommission,
-        configured,
+        configured: hasRates(versionAt(versions, day)),
       },
       labor: {
         costCents: d.labor,
@@ -515,9 +593,12 @@ export class PnlService {
   }
 
   private withKeys(
-    rates: ReturnType<typeof readRates>,
+    versions: RateVersion[],
+    today: string,
     paymentMethods: string[],
   ): PnlRates {
+    const current = versionAt(versions, today);
+    const rates = current ?? ZERO_RATES;
     return {
       paymentFeeBps: {
         ...Object.fromEntries(paymentMethods.map((key) => [key, 0])),
@@ -526,6 +607,8 @@ export class PnlService {
       platformCommissionBps: rates.platformCommissionBps,
       paymentMethods,
       platforms: PNL_PLATFORMS,
+      effectiveFrom: current?.effectiveFrom ?? null,
+      history: [...versions].reverse(),
     };
   }
 
@@ -534,16 +617,23 @@ export class PnlService {
       this.loadRestaurant(restaurantId),
       this.paymentMethodKeys(restaurantId),
     ]);
-    return this.withKeys(readRates(shop.settings), paymentMethods);
+    return this.withKeys(
+      readVersions(shop.settings),
+      shop.today,
+      paymentMethods,
+    );
   }
 
-  /** Replaces `settings.pnlRates` in one statement, leaving every other settings key as it is in the row at write time. */
+  /**
+   * Adds the version effective from `effectiveFrom` (default: the shop's
+   * today), or replaces the one already on that date. The write is one
+   * `json_set` that only applies while the stored pnlRates is still the one
+   * read here, retried once, so two saves seconds apart cannot drop a version
+   * and every other settings key stays as it is in the row at write time.
+   */
   async setRates(
     restaurantId: string,
-    input: {
-      paymentFeeBps: Record<string, number>;
-      platformCommissionBps: Record<string, number>;
-    },
+    input: RateSet & { effectiveFrom?: string },
   ): Promise<PnlRates> {
     const paymentMethods = await this.paymentMethodKeys(restaurantId);
     const allowed = new Set(paymentMethods);
@@ -561,19 +651,59 @@ export class PnlService {
         })),
       );
     }
-    const rates = readRates({ pnlRates: input });
-    const rows = await this.db
-      .update(restaurants)
-      .set({
-        settings: sql`json_set(coalesce(${restaurants.settings}, '{}'), '$.pnlRates', json(${JSON.stringify(rates)}))`,
-        updatedAt: new Date(this.now()),
-      })
-      .where(eq(restaurants.id, restaurantId))
-      .returning({ id: restaurants.id });
-    if (rows.length === 0) {
-      throw notFound("Restaurant not found", "RESTAURANT_NOT_FOUND");
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const shop = await this.loadRestaurant(restaurantId);
+      const effectiveFrom = input.effectiveFrom ?? shop.today;
+      if (!isRealDate(effectiveFrom) || effectiveFrom > shop.today) {
+        throw badRequest(
+          "effectiveFrom must be a real date that is not in the future",
+          "PNL_RATES_DATE_INVALID",
+        );
+      }
+      const versions = [
+        ...readVersions(shop.settings).filter(
+          (v) => v.effectiveFrom !== effectiveFrom,
+        ),
+        {
+          effectiveFrom,
+          ...normalizeRates({
+            paymentFeeBps: input.paymentFeeBps,
+            platformCommissionBps: input.platformCommissionBps,
+          }),
+        },
+      ].sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+      if (versions.length > PNL_MAX_RATE_VERSIONS) {
+        throw badRequest(
+          `At most ${PNL_MAX_RATE_VERSIONS} rate versions are kept`,
+          "PNL_RATES_TOO_MANY_VERSIONS",
+        );
+      }
+
+      const rows = await this.db
+        .update(restaurants)
+        .set({
+          settings: sql`json_set(coalesce(${restaurants.settings}, '{}'), '$.pnlRates', json(${JSON.stringify({ versions })}))`,
+          updatedAt: new Date(this.now()),
+        })
+        .where(
+          and(
+            eq(restaurants.id, restaurantId),
+            shop.pnlRatesJson === null
+              ? sql`json_extract(${restaurants.settings}, '$.pnlRates') is null`
+              : sql`json_extract(${restaurants.settings}, '$.pnlRates') = ${shop.pnlRatesJson}`,
+          ),
+        )
+        .returning({ id: restaurants.id });
+      if (rows.length > 0) {
+        return this.withKeys(versions, shop.today, paymentMethods);
+      }
     }
-    return this.withKeys(rates, paymentMethods);
+    // loadRestaurant 404s a missing shop, so a miss here is a concurrent save.
+    throw conflict(
+      "The rates were changed by another save; reload and try again",
+      "PNL_RATES_CONFLICT",
+    );
   }
 
   async createExpense(

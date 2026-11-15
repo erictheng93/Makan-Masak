@@ -45,6 +45,8 @@ export const employeeSchedules = sqliteTable(
     scheduledHours: real("scheduled_hours").notNull(),
     actualHours: real("actual_hours").default(0),
     overtimeHours: real("overtime_hours").default(0),
+    /** Hourly rate (cents) in force at clock-out: employee wage, else template rate. Migration 0048. */
+    hourlyRateCents: integer("hourly_rate_cents"),
 
     // Status
     status: text("status", {

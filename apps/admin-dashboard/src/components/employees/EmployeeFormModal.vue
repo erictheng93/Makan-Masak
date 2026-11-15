@@ -140,6 +140,35 @@
                   </option>
                 </select>
               </div>
+
+              <div v-if="canEditWage">
+                <label
+                  for="employee-hourly-rate"
+                  class="block text-sm font-medium text-ios-text/70 mb-1"
+                >
+                  {{
+                    t("users.modal.hourlyRateLabel", { symbol: currencySymbol })
+                  }}
+                </label>
+                <input
+                  id="employee-hourly-rate"
+                  v-model.number="hourlyRate"
+                  type="number"
+                  min="0"
+                  :step="inputStep"
+                  inputmode="decimal"
+                  :placeholder="inputPlaceholder"
+                  data-testid="employee-hourly-rate"
+                  aria-describedby="employee-hourly-rate-hint"
+                  class="w-full px-3.5 py-2.5 bg-ios-bg border-none rounded-xl text-ios-text focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)] focus:bg-white transition-all"
+                />
+                <p
+                  id="employee-hourly-rate-hint"
+                  class="mt-1 text-xs text-ios-text/50"
+                >
+                  {{ t("users.modal.hourlyRateHint") }}
+                </p>
+              </div>
             </div>
 
             <div class="flex justify-end space-x-3 mt-6">
@@ -174,6 +203,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { useI18n } from "@/i18n";
+import { useCurrency } from "@/composables/useCurrency";
 import type { Employee, EmployeeFormData } from "@/types/employee";
 
 const props = defineProps<{
@@ -183,6 +213,8 @@ const props = defineProps<{
   saving?: boolean;
   /** Server (or parent) field messages keyed by field name. */
   fieldErrors?: Record<string, string>;
+  /** Owner / platform admin only; the field is neither shown nor sent otherwise. */
+  canEditWage?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -191,6 +223,8 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { currencySymbol, inputStep, inputPlaceholder, centsToMajor } =
+  useCurrency();
 
 // Mirrors apps/api users/schemas/validation.ts strongPasswordSchema.
 const PASSWORD_STRENGTH_REGEX =
@@ -208,6 +242,13 @@ const form = ref<EmployeeFormData>({
   email: "",
   role: null,
   status: "active",
+  hourlyRate: "",
+});
+
+// v-model.number gives "" for a blank box; keep it as the explicit "not set".
+const hourlyRate = computed({
+  get: () => form.value.hourlyRate ?? "",
+  set: (value: number | "") => (form.value.hourlyRate = value),
 });
 
 watch(
@@ -222,6 +263,10 @@ watch(
         email: props.employee.email || "",
         role: props.employee.role,
         status: props.employee.status === "active" ? "active" : "inactive",
+        hourlyRate:
+          props.employee.hourlyRateCents == null
+            ? ""
+            : centsToMajor(props.employee.hourlyRateCents),
       };
     } else if (open) {
       form.value = {
@@ -231,6 +276,7 @@ watch(
         email: "",
         role: null,
         status: "active",
+        hourlyRate: "",
       };
     }
   },
@@ -247,6 +293,8 @@ const handleSave = () => {
     passwordInvalid.value = true;
     return;
   }
-  emit("save", { ...form.value }, !!props.employee);
+  const payload = { ...form.value };
+  if (!props.canEditWage) delete payload.hourlyRate;
+  emit("save", payload, !!props.employee);
 };
 </script>

@@ -12,6 +12,7 @@ const getRange = vi.hoisted(() => vi.fn());
 const getRates = vi.hoisted(() => vi.fn());
 const saveRates = vi.hoisted(() => vi.fn());
 const downloadCsv = vi.hoisted(() => vi.fn());
+const downloadXlsx = vi.hoisted(() => vi.fn());
 const confirm = vi.hoisted(() => vi.fn());
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 const authState = vi.hoisted(() => ({
@@ -39,6 +40,7 @@ vi.mock("@/services/pnlService", async (importOriginal) => ({
 vi.mock("@/utils/pnl", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/utils/pnl")>()),
   downloadCsv,
+  downloadXlsx,
 }));
 
 let DailyPnlView: Component;
@@ -51,8 +53,9 @@ function statement(overrides: Partial<DailyPnl> = {}): DailyPnl {
       grossSalesCents: 1_000_000,
       discountCents: 50_000,
       refundCents: 0,
+      collectedCents: 950_000,
       netRevenueCents: 950_000,
-      taxCents: 45_000,
+      taxCents: 0,
       serviceChargeCents: 90_000,
       orderCount: 12,
     },
@@ -173,6 +176,19 @@ describe("DailyPnlView", () => {
       platformCommissionBps: {},
       paymentMethods: ["cash", "ecpay", "mystery_pay"],
       platforms: ["uber_eats"],
+      effectiveFrom: "2026-11-01",
+      history: [
+        {
+          effectiveFrom: "2026-11-01",
+          paymentFeeBps: { ecpay: 150 },
+          platformCommissionBps: {},
+        },
+        {
+          effectiveFrom: "1970-01-01",
+          paymentFeeBps: { ecpay: 200, cash: 0 },
+          platformCommissionBps: { uber_eats: 3000 },
+        },
+      ],
     });
     saveRates.mockResolvedValue({});
     confirm.mockResolvedValue(true);
@@ -266,6 +282,7 @@ describe("DailyPnlView", () => {
           grossSalesCents: 0,
           discountCents: 0,
           refundCents: 0,
+          collectedCents: 0,
           netRevenueCents: 0,
           taxCents: 0,
           serviceChargeCents: 0,
@@ -466,7 +483,7 @@ describe("DailyPnlView", () => {
 
     expect(
       wrapper.get('[data-testid="pnl-labor-missing-rate"]').text(),
-    ).toContain("2 個班次沒有時薪，未計入");
+    ).toContain("2 個班次的員工與班別都沒有設定時薪，未計入");
   });
 
   it("converts 2.75% to 275 bps, saves, then refetches the statement", async () => {
@@ -482,7 +499,7 @@ describe("DailyPnlView", () => {
       "mystery_pay",
     );
     expect(wrapper.get('[data-testid="pnl-rates"]').text()).toContain(
-      "過去的日期",
+      "生效日之前的日期沿用當時的費率",
     );
 
     expect(wrapper.get('[data-testid="pnl-rates-form"]').text()).toContain(
@@ -502,6 +519,7 @@ describe("DailyPnlView", () => {
     expect(saveRates).toHaveBeenCalledWith("shop-1", {
       paymentFeeBps: { cash: 0, ecpay: 275, mystery_pay: 50 },
       platformCommissionBps: { uber_eats: 3000 },
+      effectiveFrom: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
     });
     expect(toast.success).toHaveBeenCalledOnce();
     expect(getDaily).toHaveBeenCalledOnce();
@@ -616,7 +634,7 @@ describe("DailyPnlView", () => {
     await wrapper.get('[data-testid="pnl-mode-range"]').trigger("click");
     await flushPromises();
 
-    await wrapper.get('[data-testid="pnl-range-export"]').trigger("click");
+    await wrapper.get('[data-testid="pnl-export-csv"]').trigger("click");
 
     expect(downloadCsv).toHaveBeenCalledOnce();
     const [csv, filename] = downloadCsv.mock.calls[0];
@@ -624,7 +642,7 @@ describe("DailyPnlView", () => {
     expect(csv.startsWith("\uFEFF")).toBe(true);
     const lines = csv.slice(1).split("\n");
     expect(lines[0]).toBe(
-      "日期,訂單數,淨營收,銷貨成本,毛利,手續費與抽成,人事成本,營業費用,損益",
+      "日期,訂單數,淨營收（未稅）,銷貨成本,毛利,手續費與抽成,人事成本,營業費用,損益",
     );
     expect(lines[1]).toBe("2026-11-01,5,5000,2000,3000,200,600,100,2100");
     expect(lines[3]).toBe("2026-11-03,1,100,50,50,0,600,0,-550");
@@ -692,5 +710,287 @@ describe("DailyPnlView", () => {
 
     expect(wrapper.text().split("本日尚無營業費用").length - 1).toBe(1);
     expect(wrapper.text()).toContain("費用明細");
+  });
+
+  it("hides the collected and tax rows when no tax was collected", async () => {
+    const wrapper = await mountView();
+
+    expect(wrapper.find('[data-testid="pnl-collected"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="pnl-tax"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="pnl-collected-note"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.get('[data-testid="pnl-statement"]').text()).toContain(
+      "= 淨營收",
+    );
+    expect(wrapper.get('[data-testid="pnl-statement"]').text()).not.toContain(
+      "未稅",
+    );
+  });
+
+  it("shows 實收金額, 代收稅額 and the ex-tax net when tax was collected", async () => {
+    getDaily.mockResolvedValue(
+      statement({
+        revenue: {
+          ...statement().revenue,
+          collectedCents: 950_000,
+          taxCents: 45_000,
+          netRevenueCents: 905_000,
+        },
+        grossProfitCents: 505_000,
+      }),
+    );
+    const wrapper = await mountView();
+
+    expect(wrapper.get('[data-testid="pnl-collected"]').text()).toBe(
+      "NT$9,500",
+    );
+    expect(wrapper.get('[data-testid="pnl-tax"]').text()).toBe("NT$450");
+    expect(wrapper.get('[data-testid="pnl-net-revenue"]').text()).toBe(
+      "NT$9,050",
+    );
+    const text = wrapper.get('[data-testid="pnl-statement"]').text();
+    expect(text).toContain("= 淨營收（未稅）");
+    expect(text).toContain("數據分析");
+    // Gross margin is on the ex-tax net revenue: 5050 / 9050.
+    expect(wrapper.get('[data-testid="pnl-gross-margin"]').text()).toBe(
+      "55.8%",
+    );
+  });
+
+  it("exports the single day as label/amount rows plus the entries, neutralising formulas", async () => {
+    getDaily.mockResolvedValue(
+      statement({
+        expenses: {
+          totalCents: 300_000,
+          byCategory: [{ category: "rent", amountCents: 300_000 }],
+          items: [
+            {
+              id: "e1",
+              category: "rent",
+              amountCents: 100_000,
+              note: '=HYPERLINK("http://evil","x")',
+              createdAtMs: 1,
+            },
+            {
+              id: "e2",
+              category: "rent",
+              amountCents: 200_000,
+              note: "@SUM(A1)",
+              createdAtMs: 2,
+            },
+          ],
+        },
+      }),
+    );
+    const wrapper = await mountView();
+
+    await wrapper.get('[data-testid="pnl-export-csv"]').trigger("click");
+
+    expect(downloadCsv).toHaveBeenCalledOnce();
+    const [csv, filename] = downloadCsv.mock.calls[0];
+    expect(filename).toBe("pnl_2026-11-12.csv");
+    const lines: string[] = csv.slice(1).split("\n");
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        "銷售總額,10000",
+        "實收金額,9500",
+        "代收稅額,0",
+        "淨營收（未稅）,9500",
+        "毛利率,57.9%",
+        "金流手續費（估算）,250",
+        "人事成本（排班）,600",
+        "營業費用,3000",
+        "本日損益,2500",
+        "類別,備註（選填）,金額",
+      ]),
+    );
+    // Revenue lines come before COGS, which comes before the net profit.
+    expect(lines.findIndex((l) => l.startsWith("銷售總額"))).toBeLessThan(
+      lines.findIndex((l) => l.startsWith("本日損益")),
+    );
+    expect(lines).toContain(`租金,"'=HYPERLINK(""http://evil"",""x"")",1000`);
+    expect(lines).toContain("租金,'@SUM(A1),2000");
+  });
+
+  it("hands the Excel builder real numeric cells for both modes", async () => {
+    getDaily.mockResolvedValue(
+      statement({
+        expenses: {
+          totalCents: 100_000,
+          byCategory: [{ category: "rent", amountCents: 100_000 }],
+          items: [
+            {
+              id: "e1",
+              category: "rent",
+              amountCents: 100_000,
+              note: "+1+1",
+              createdAtMs: 1,
+            },
+          ],
+        },
+      }),
+    );
+    const wrapper = await mountView();
+
+    await wrapper.get('[data-testid="pnl-export-xlsx"]').trigger("click");
+    await flushPromises();
+    const [rows, filename] = downloadXlsx.mock.calls[0];
+    expect(filename).toBe("pnl_2026-11-12.xlsx");
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        ["銷售總額", 10_000],
+        ["本日損益", 2_500],
+        ["租金", "'+1+1", 1_000],
+      ]),
+    );
+
+    await wrapper.get('[data-testid="pnl-mode-range"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="pnl-export-xlsx"]').trigger("click");
+    await flushPromises();
+    const [rangeRows, rangeName] = downloadXlsx.mock.calls[1];
+    expect(rangeName).toBe("pnl_2026-11-01_2026-11-03.xlsx");
+    expect(rangeRows[0][2]).toBe("淨營收（未稅）");
+    expect(rangeRows[1]).toEqual([
+      "2026-11-01",
+      5,
+      5000,
+      2000,
+      3000,
+      200,
+      600,
+      100,
+      2100,
+    ]);
+    expect(rangeRows[4][0]).toBe("區間合計");
+  });
+
+  it("offers export and print in both modes and prints via window.print", async () => {
+    const print = vi.spyOn(window, "print").mockImplementation(() => {});
+    const wrapper = await mountView();
+
+    await wrapper.get('[data-testid="pnl-print"]').trigger("click");
+    expect(print).toHaveBeenCalledOnce();
+    expect(wrapper.get('[data-testid="pnl-print-period"]').text()).toBe(
+      (wrapper.get('[data-testid="pnl-date"]').element as HTMLInputElement)
+        .value,
+    );
+
+    await wrapper.get('[data-testid="pnl-mode-range"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.find('[data-testid="pnl-export-csv"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="pnl-export-xlsx"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="pnl-print-period"]').text()).toBe(
+      "2026-11-01 – 2026-11-03",
+    );
+    await wrapper.get('[data-testid="pnl-print"]').trigger("click");
+    expect(print).toHaveBeenCalledTimes(2);
+    print.mockRestore();
+  });
+
+  it("renders the rate history and loads a chosen version into the form", async () => {
+    const wrapper = await mountView();
+    await wrapper.get('[data-testid="pnl-rates-open"]').trigger("click");
+    await flushPromises();
+
+    const history = wrapper.get('[data-testid="pnl-rates-history"]');
+    expect(history.text()).toContain("2026-11-01");
+    expect(history.text()).toContain("最初");
+    expect(history.text()).toContain("Uber Eats 30%");
+    expect(history.text()).not.toContain("1970-01-01");
+
+    await wrapper
+      .get('[data-testid="pnl-rates-history-1970-01-01"]')
+      .trigger("click");
+    const ecpay = wrapper.get('[data-testid="pnl-rate-payment-ecpay"]');
+    expect((ecpay.element as HTMLInputElement).value).toBe("2");
+    expect(
+      (
+        wrapper.get('[data-testid="pnl-rate-platform-uber_eats"]')
+          .element as HTMLInputElement
+      ).value,
+    ).toBe("30");
+    expect(
+      (
+        wrapper.get('[data-testid="pnl-rates-effective-from"]')
+          .element as HTMLInputElement
+      ).value,
+    ).toBe("1970-01-01");
+
+    await wrapper.get('[data-testid="pnl-rates-form"]').trigger("submit");
+    await flushPromises();
+    expect(saveRates).toHaveBeenCalledWith(
+      "shop-1",
+      expect.objectContaining({ effectiveFrom: "1970-01-01" }),
+    );
+  });
+
+  it("sends the chosen effective date", async () => {
+    const wrapper = await mountView();
+    await wrapper.get('[data-testid="pnl-rates-open"]').trigger("click");
+    await flushPromises();
+
+    await wrapper
+      .get('[data-testid="pnl-rates-effective-from"]')
+      .setValue("2026-11-05");
+    await wrapper.get('[data-testid="pnl-rates-form"]').trigger("submit");
+    await flushPromises();
+
+    expect(saveRates).toHaveBeenCalledWith(
+      "shop-1",
+      expect.objectContaining({ effectiveFrom: "2026-11-05" }),
+    );
+  });
+
+  it.each([
+    ["PNL_RATES_DATE_INVALID", "生效日不可晚於今天。"],
+    [
+      "PNL_RATES_TOO_MANY_VERSIONS",
+      "費率版本已達上限（60 筆），請改用既有的生效日。",
+    ],
+  ])("maps %s to a translated toast", async (code, message) => {
+    saveRates.mockRejectedValueOnce(apiError(code));
+    const wrapper = await mountView();
+    await wrapper.get('[data-testid="pnl-rates-open"]').trigger("click");
+    await flushPromises();
+
+    await wrapper.get('[data-testid="pnl-rates-form"]').trigger("submit");
+    await flushPromises();
+
+    expect(toast.error).toHaveBeenCalledWith(message);
+  });
+
+  it("maps PNL_RATES_CONFLICT to a toast and reloads the stored rates", async () => {
+    saveRates.mockRejectedValueOnce(apiError("PNL_RATES_CONFLICT"));
+    const wrapper = await mountView();
+    await wrapper.get('[data-testid="pnl-rates-open"]').trigger("click");
+    await flushPromises();
+    expect(getRates).toHaveBeenCalledTimes(1);
+
+    await wrapper.get('[data-testid="pnl-rate-payment-ecpay"]').setValue("9");
+    await wrapper.get('[data-testid="pnl-rates-form"]').trigger("submit");
+    await flushPromises();
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "費率剛被其他人更新，請重新載入後再試。",
+    );
+    expect(getRates).toHaveBeenCalledTimes(2);
+    expect(
+      (
+        wrapper.get('[data-testid="pnl-rate-payment-ecpay"]')
+          .element as HTMLInputElement
+      ).value,
+    ).toBe("1.5");
+  });
+
+  it("links the missing-wage note to Employees", async () => {
+    getDaily.mockResolvedValue(
+      statement({ labor: { costCents: 0, shifts: 2, shiftsMissingRate: 2 } }),
+    );
+    const wrapper = await mountView();
+    expect(wrapper.find('[data-testid="pnl-labor-set-wage"]').exists()).toBe(
+      true,
+    );
   });
 });
