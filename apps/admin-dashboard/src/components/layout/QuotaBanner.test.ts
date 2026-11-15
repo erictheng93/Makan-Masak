@@ -27,9 +27,9 @@ const mounted: Array<{ unmount: () => void }> = [];
 function meter(overrides: Partial<QuotaMeter> = {}): QuotaMeter {
   return {
     meterKey: "orders.created",
-    total: 85,
-    softLimit: 80,
-    hardLimit: 100,
+    total: 2550,
+    softLimit: 2400,
+    hardLimit: 3000,
     state: "warning",
     enforced: true,
     ...overrides,
@@ -67,7 +67,7 @@ describe("QuotaBanner", () => {
     expect(getQuotaMeters).toHaveBeenCalledOnce();
     const banner = wrapper.get('[data-testid="quota-banner-orders.created"]');
     expect(banner.attributes("data-state")).toBe("warning");
-    expect(banner.text()).toContain("本期訂單已使用 85%（85/100）");
+    expect(banner.text()).toContain("本期訂單已使用 85%（2,550/3,000）");
 
     await wrapper.get('[data-testid="quota-banner-dismiss"]').trigger("click");
 
@@ -77,7 +77,7 @@ describe("QuotaBanner", () => {
   });
 
   it("says customers cannot order once over, with no way to dismiss", async () => {
-    const wrapper = await mountBanner([meter({ total: 100, state: "over" })]);
+    const wrapper = await mountBanner([meter({ total: 3000, state: "over" })]);
 
     const banner = wrapper.get('[data-testid="quota-banner-orders.created"]');
     expect(banner.attributes("data-state")).toBe("over");
