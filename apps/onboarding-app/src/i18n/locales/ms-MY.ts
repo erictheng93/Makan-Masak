@@ -121,7 +121,7 @@ const msMY: Messages = {
     success: "Permohonan dihantar",
     findApplication: "Cari permohonan saya",
     status: "Status permohonan",
-    default: "MakanMasak Permohonan Kedai",
+    default: "Permohonan Kedai MakanMasak",
   },
 
   home: {
