@@ -121,6 +121,7 @@ import {
   Package,
 } from "lucide-vue-next";
 import type { OrderStatus } from "@/types";
+import { recentOrderStatusLabel } from "@/utils/recentOrderStatusLabel";
 
 interface RecentOrder {
   id: string;
@@ -211,10 +212,7 @@ const getStatusIcon = (status: OrderStatus) => {
 };
 
 const getStatusText = (status: OrderStatus) => {
-  return (
-    t(`dashboard.recentOrdersPanel.status.${status}`) ||
-    t("dashboard.recentOrdersPanel.status.unknown")
-  );
+  return recentOrderStatusLabel(status, t);
 };
 
 const getTimeElapsed = (dateString: string) =>

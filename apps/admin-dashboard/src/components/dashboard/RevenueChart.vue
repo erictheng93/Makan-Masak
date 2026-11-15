@@ -29,34 +29,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-} from "chart.js";
+import { Chart as ChartJS } from "chart.js";
+import "@/utils/chartRegistry";
 import { BarChart3 } from "lucide-vue-next";
 import { useI18n } from "@/i18n";
 import { useCurrency } from "@/composables/useCurrency";
 
 const { t } = useI18n();
 const { formatPrice, currencyCode } = useCurrency();
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-);
 
 interface RevenueDataPoint {
   label: string;

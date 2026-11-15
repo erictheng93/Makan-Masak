@@ -29,28 +29,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import { Chart as ChartJS } from "chart.js";
+import "@/utils/chartRegistry";
 import { BarChart3 } from "lucide-vue-next";
 import { useI18n } from "@/i18n";
 
 const { t } = useI18n();
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-);
 
 interface OrderDataPoint {
   label: string;

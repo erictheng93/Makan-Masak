@@ -25,6 +25,9 @@ vi.mock("chart.js", () => {
   }
   return {
     Chart,
+    BarController: {},
+    LineController: {},
+    BarElement: {},
     CategoryScale: {},
     LinearScale: {},
     PointElement: {},

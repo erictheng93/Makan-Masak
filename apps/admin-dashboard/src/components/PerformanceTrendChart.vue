@@ -123,20 +123,8 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { useI18n } from "@/i18n";
 import { useCurrency } from "@/composables/useCurrency";
 import { useDateFormatter } from "@/composables/useDateFormatter";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-  type TooltipItem,
-} from "chart.js";
-import { Chart } from "chart.js";
+import { Chart, type TooltipItem } from "chart.js";
+import "@/utils/chartRegistry";
 import {
   ChartBarIcon,
   ArrowTrendingUpIcon,
@@ -149,19 +137,6 @@ import {
   CHART_NEUTRAL_COLOR,
   withAlpha,
 } from "@makanmasak/shared/utils/chart-palette";
-
-// 註冊 Chart.js 組件
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-);
 
 interface Props {
   data: PerformanceTrend[];
