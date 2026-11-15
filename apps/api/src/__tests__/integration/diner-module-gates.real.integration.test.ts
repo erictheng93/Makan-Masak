@@ -63,7 +63,7 @@ describe("diner endpoints after a module downgrade", () => {
     await invalidateSubscriptionCacheForEnv(testApp.env, restaurantId);
   }
 
-  function send(
+  async function send(
     path: string,
     init: { method?: string; body?: unknown; headers?: HeadersInit } = {},
   ): Promise<Response> {
