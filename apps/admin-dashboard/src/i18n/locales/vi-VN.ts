@@ -6527,7 +6527,7 @@ const viVN: Messages = {
       api_requests: "Yêu cầu API",
       print_jobs: "Lệnh in",
       ai_requests: "Yêu cầu AI",
-      storage_bytes: "Dung lượng lưu trữ (byte)",
+      storage_bytes: "Dung lượng lưu trữ",
     },
     quota: {
       viewPlans: "Xem các gói",
@@ -6549,6 +6549,8 @@ const viVN: Messages = {
       loadFailed: "Không tải được thông tin gói. Vui lòng thử lại sau.",
       unlimited: "Không giới hạn",
       upgradeNow: "Nâng cấp ngay",
+      notIncluded: "Không bao gồm",
+      changeNow: "Đổi ngay",
       downgradeNow: "Hạ cấp ngay",
       scheduleDowngrade: "Lên lịch hạ cấp, có hiệu lực {date}",
       unavailable: "Không khả dụng",
@@ -6586,8 +6588,12 @@ const viVN: Messages = {
       blocking: "Cần xử lý trước",
       impact: "Những gì thay đổi",
       goToPos: "Đến POS để đóng ca",
+      confirmChange: "Xác nhận thay đổi",
+      confirmScheduleDowngrade: "Xác nhận lên lịch hạ cấp",
+      usageFresh: "Mức sử dụng của kỳ này sẽ được tính lại từ 0.",
+      usageFreshScheduled:
+        "Mức sử dụng của gói mới được tính lại từ ngày có hiệu lực.",
       confirmUpgrade: "Xác nhận nâng cấp",
-      confirmDowngrade: "Xác nhận hạ cấp",
     },
     impact: {
       open_cash_shift:
@@ -6605,8 +6611,6 @@ const viVN: Messages = {
         "Tồn kho của {count} nguyên liệu sẽ không còn được theo dõi",
       connected_platforms:
         "{count} nền tảng giao hàng đang kết nối sẽ bị ngắt kết nối",
-      usage_over_new_limit:
-        "{count} chỉ số sử dụng của kỳ này đã vượt giới hạn của gói mới",
     },
     errors: {
       unchanged: "Bạn đang dùng gói này rồi.",

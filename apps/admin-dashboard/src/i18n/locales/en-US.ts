@@ -6529,7 +6529,7 @@ const enUS: Messages = {
       api_requests: "API requests",
       print_jobs: "Print jobs",
       ai_requests: "AI requests",
-      storage_bytes: "Storage (bytes)",
+      storage_bytes: "Storage",
     },
     quota: {
       viewPlans: "View plans",
@@ -6552,6 +6552,8 @@ const enUS: Messages = {
       loadFailed: "Could not load plan information. Please try again later.",
       unlimited: "Unlimited",
       upgradeNow: "Upgrade now",
+      notIncluded: "Not included",
+      changeNow: "Switch now",
       downgradeNow: "Downgrade now",
       scheduleDowngrade: "Schedule downgrade, effective {date}",
       unavailable: "Unavailable",
@@ -6588,8 +6590,12 @@ const enUS: Messages = {
       blocking: "Resolve this first",
       impact: "What changes",
       goToPos: "Go to POS to close the shift",
+      confirmChange: "Confirm change",
+      confirmScheduleDowngrade: "Confirm scheduled downgrade",
+      usageFresh: "This period's usage will start again from 0.",
+      usageFreshScheduled:
+        "Usage on the new plan is counted afresh from the effective date.",
       confirmUpgrade: "Confirm upgrade",
-      confirmDowngrade: "Confirm downgrade",
     },
     impact: {
       open_cash_shift:
@@ -6607,8 +6613,6 @@ const enUS: Messages = {
         "Stock for {count} ingredient(s) will no longer be tracked",
       connected_platforms:
         "{count} connected delivery platform(s) will be disconnected",
-      usage_over_new_limit:
-        "{count} usage meter(s) are already over the new plan's limit",
     },
     errors: {
       unchanged: "You are already on this plan.",

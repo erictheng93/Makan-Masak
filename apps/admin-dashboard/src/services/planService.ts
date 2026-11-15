@@ -55,8 +55,7 @@ export type PlanImpactKey =
   | "scheduled_shifts"
   | "pending_leave_requests"
   | "tracked_ingredients"
-  | "connected_platforms"
-  | "usage_over_new_limit";
+  | "connected_platforms";
 
 export interface PlanImpact {
   toTier: PlanTier;
@@ -77,28 +76,49 @@ export const PLAN_ERROR_CODES = [
 
 export type PlanErrorCode = (typeof PLAN_ERROR_CODES)[number];
 
+/**
+ * Owners are scoped by their token. Platform admins must name the shop they are
+ * acting on, as `?restaurantId=`.
+ */
+const scoped = (path: string, restaurantId?: string | null) =>
+  restaurantId
+    ? `${path}?restaurantId=${encodeURIComponent(restaurantId)}`
+    : path;
+
 export const planService = {
-  async getPlan(): Promise<PlanOverview> {
-    const response = await api.get<PlanOverview>("/billing/plan");
+  async getPlan(restaurantId?: string | null): Promise<PlanOverview> {
+    const response = await api.get<PlanOverview>(
+      scoped("/billing/plan", restaurantId),
+    );
     return unwrapApiPayload<PlanOverview>(response.data);
   },
 
-  async getImpact(planTier: PlanTier): Promise<PlanImpact> {
+  async getImpact(
+    planTier: PlanTier,
+    restaurantId?: string | null,
+  ): Promise<PlanImpact> {
     const response = await api.get<PlanImpact>("/billing/plan/impact", {
       planTier,
+      ...(restaurantId ? { restaurantId } : {}),
     });
     return unwrapApiPayload<PlanImpact>(response.data);
   },
 
-  async changePlan(planTier: PlanTier): Promise<PlanOverview> {
-    const response = await api.post<PlanOverview>("/billing/plan/change", {
-      planTier,
-    });
+  async changePlan(
+    planTier: PlanTier,
+    restaurantId?: string | null,
+  ): Promise<PlanOverview> {
+    const response = await api.post<PlanOverview>(
+      scoped("/billing/plan/change", restaurantId),
+      { planTier },
+    );
     return unwrapApiPayload<PlanOverview>(response.data);
   },
 
-  async cancelPending(): Promise<PlanOverview> {
-    const response = await api.delete<PlanOverview>("/billing/plan/pending");
+  async cancelPending(restaurantId?: string | null): Promise<PlanOverview> {
+    const response = await api.delete<PlanOverview>(
+      scoped("/billing/plan/pending", restaurantId),
+    );
     return unwrapApiPayload<PlanOverview>(response.data);
   },
 };

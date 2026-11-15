@@ -6345,7 +6345,7 @@ const zhCN: Messages = {
       api_requests: "API 请求",
       print_jobs: "打印任务",
       ai_requests: "AI 请求",
-      storage_bytes: "存储空间（字节）",
+      storage_bytes: "存储空间",
     },
     quota: {
       viewPlans: "查看方案",
@@ -6367,6 +6367,8 @@ const zhCN: Messages = {
       loadFailed: "无法加载方案信息，请稍后再试。",
       unlimited: "不限",
       upgradeNow: "立即升级",
+      notIncluded: "不含",
+      changeNow: "立即更改",
       downgradeNow: "立即降级",
       scheduleDowngrade: "预约降级，{date} 生效",
       unavailable: "无法选择",
@@ -6402,8 +6404,11 @@ const zhCN: Messages = {
       blocking: "需要先处理",
       impact: "更改后的影响",
       goToPos: "前往 POS 结束班次",
+      confirmChange: "确认更改",
+      confirmScheduleDowngrade: "确认预约降级",
+      usageFresh: "本期用量将从 0 重新计算。",
+      usageFreshScheduled: "新方案的用量自生效日起重新计算。",
       confirmUpgrade: "确认升级",
-      confirmDowngrade: "确认降级",
     },
     impact: {
       open_cash_shift:
@@ -6415,7 +6420,6 @@ const zhCN: Messages = {
       pending_leave_requests: "{count} 件待审核的请假申请将无法处理",
       tracked_ingredients: "{count} 项食材的库存将停止跟踪",
       connected_platforms: "{count} 个已连接的外卖平台将断开连接",
-      usage_over_new_limit: "{count} 项本期用量已超过新方案的上限",
     },
     errors: {
       unchanged: "您已经在使用这个方案。",

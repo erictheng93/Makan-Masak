@@ -26,6 +26,30 @@ describe("planService", () => {
     expect(api.get).toHaveBeenCalledWith("/billing/plan");
   });
 
+  it("scopes every plan call to the shop an admin names", async () => {
+    vi.mocked(api.get).mockResolvedValue(envelope({}) as never);
+    vi.mocked(api.post).mockResolvedValue(envelope({}) as never);
+    vi.mocked(api.delete).mockResolvedValue(envelope({}) as never);
+
+    await planService.getPlan("shop 9");
+    await planService.getImpact("pro", "shop 9");
+    await planService.changePlan("pro", "shop 9");
+    await planService.cancelPending("shop 9");
+
+    expect(api.get).toHaveBeenCalledWith("/billing/plan?restaurantId=shop%209");
+    expect(api.get).toHaveBeenCalledWith("/billing/plan/impact", {
+      planTier: "pro",
+      restaurantId: "shop 9",
+    });
+    expect(api.post).toHaveBeenCalledWith(
+      "/billing/plan/change?restaurantId=shop%209",
+      { planTier: "pro" },
+    );
+    expect(api.delete).toHaveBeenCalledWith(
+      "/billing/plan/pending?restaurantId=shop%209",
+    );
+  });
+
   it("asks for the impact of one target plan", async () => {
     vi.mocked(api.get).mockResolvedValueOnce(
       envelope({ toTier: "basic", lostModules: [], items: [] }) as never,

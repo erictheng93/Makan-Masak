@@ -6631,7 +6631,7 @@ const zhTWRuntimeKeys = {
       api_requests: "API 請求",
       print_jobs: "列印工作",
       ai_requests: "AI 請求",
-      storage_bytes: "儲存空間（位元組）",
+      storage_bytes: "儲存空間",
     },
     quota: {
       viewPlans: "查看方案",
@@ -6653,6 +6653,8 @@ const zhTWRuntimeKeys = {
       loadFailed: "無法載入方案資訊，請稍後再試。",
       unlimited: "不限",
       upgradeNow: "立即升級",
+      notIncluded: "不含",
+      changeNow: "立即變更",
       downgradeNow: "立即降級",
       scheduleDowngrade: "排定降級，{date} 生效",
       unavailable: "無法選擇",
@@ -6688,8 +6690,11 @@ const zhTWRuntimeKeys = {
       blocking: "需要先處理",
       impact: "變更後的影響",
       goToPos: "前往 POS 結束班次",
+      confirmChange: "確認變更",
+      confirmScheduleDowngrade: "確認排定降級",
+      usageFresh: "本期用量將從 0 重新計算。",
+      usageFreshScheduled: "新方案的用量自生效日起重新計算。",
       confirmUpgrade: "確認升級",
-      confirmDowngrade: "確認降級",
     },
     impact: {
       open_cash_shift:
@@ -6701,7 +6706,6 @@ const zhTWRuntimeKeys = {
       pending_leave_requests: "{count} 件待審核的請假申請將無法處理",
       tracked_ingredients: "{count} 項食材的庫存將停止追蹤",
       connected_platforms: "{count} 個已連接的外送平台將中斷連線",
-      usage_over_new_limit: "{count} 項本期用量已超過新方案的上限",
     },
     errors: {
       unchanged: "您已經在使用這個方案。",

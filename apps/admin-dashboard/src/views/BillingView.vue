@@ -26,7 +26,7 @@
                   plan: tierLabel(plan.pendingChange.toTier),
                 })
               : t("billing.pending.scheduled", {
-                  date: formatDate(plan.pendingChange.effectiveAt),
+                  date: formatDate(plan.pendingChange?.effectiveAt ?? 0),
                   plan: tierLabel(plan.pendingChange.toTier),
                 })
           }}
@@ -143,9 +143,12 @@
               {{ meterLabel(meter.meterKey) }}
             </span>
             <span class="text-sm text-ios-secondary tabular-nums">
-              {{ meter.total }}
+              {{ formatMeterValue(meter.meterKey, meter.total, locale) }}
               <template v-if="meter.hardLimit">
-                / {{ meter.hardLimit }}</template
+                /
+                {{
+                  formatMeterValue(meter.meterKey, meter.hardLimit, locale)
+                }}</template
               >
             </span>
           </div>
@@ -214,6 +217,14 @@
       </p>
 
       <p
+        v-if="needsRestaurant"
+        class="mt-4 text-sm text-ios-secondary"
+        data-testid="billing-plans-no-restaurant"
+      >
+        {{ t("dailyPnl.noRestaurant") }}
+      </p>
+
+      <p
         v-if="planLoadFailed"
         class="mt-4 text-sm text-ios-red"
         data-testid="billing-plans-error"
@@ -273,12 +284,12 @@
 
           <div class="mt-auto pt-4">
             <p
-              v-if="plan.pendingChange?.toTier === option.tier"
+              v-if="isPendingTarget(option)"
               class="mb-2 text-xs font-semibold text-ios-orange-deep"
             >
               {{
                 t("billing.pending.badge", {
-                  date: formatDate(plan.pendingChange.effectiveAt),
+                  date: formatDate(plan.pendingChange?.effectiveAt ?? 0),
                 })
               }}
             </p>
@@ -293,9 +304,15 @@
               "
               :disabled="option.action === 'unavailable' || busy"
               :data-testid="`plan-action-${option.tier}`"
-              @click="startChange(option)"
+              @click="
+                isPendingTarget(option) ? cancelPending() : startChange(option)
+              "
             >
-              {{ actionLabel(option) }}
+              {{
+                isPendingTarget(option)
+                  ? t("billing.pending.cancel")
+                  : actionLabel(option)
+              }}
             </button>
             <p
               v-if="option.action === 'unavailable'"
@@ -331,7 +348,15 @@ import {
 import { useConfirmModal } from "@/composables/useConfirmModal";
 import { extractApiErrorCode, markErrorHandled } from "@/utils/errorHandler";
 import { plansGuideUrl } from "@/utils/guideLinks";
-import { meterMessagePath, moduleMessagePath } from "@/utils/billingLabels";
+import { useAuthStore } from "@/stores/auth";
+import { UserRole } from "@/types";
+import {
+  formatBytes,
+  formatCount,
+  formatMeterValue,
+  meterMessagePath,
+  moduleMessagePath,
+} from "@/utils/billingLabels";
 
 interface UsageMeter {
   meterKey: string;
@@ -356,6 +381,7 @@ interface UsageSummary {
 
 const { t, locale } = useI18n();
 const toast = useToast();
+const authStore = useAuthStore();
 const route = useRoute();
 const { confirm } = useConfirmModal();
 const { refresh: refreshModuleAccess } = useModuleAccess();
@@ -447,16 +473,20 @@ function formatDate(ms: number): string {
   );
 }
 
-function formatBytes(bytes: number): string {
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return `${new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(value)} ${units[unit]}`;
-}
+// Admin-scoped plan calls name the shop; an owner's token already does.
+const actingRestaurantId = computed(() =>
+  authStore.user?.role === UserRole.ADMIN ? authStore.restaurantId : null,
+);
+const needsRestaurant = computed(
+  () => authStore.user?.role === UserRole.ADMIN && !authStore.restaurantId,
+);
+
+// A feature-bound limit on a plan without that feature is "not included",
+// never "unlimited".
+const QUOTA_MODULE: Record<string, string> = {
+  "print.jobs": "receipt_printing",
+  "ai.requests": "ai_analytics",
+};
 
 const QUOTA_ROWS = [
   ["orders.created", "orders"],
@@ -469,21 +499,34 @@ function quotaRows(option: PlanOption) {
   return QUOTA_ROWS.filter(([meter]) => option.quotas[meter] !== undefined).map(
     ([meter, key]) => {
       const quota = option.quotas[meter];
+      const module = QUOTA_MODULE[meter];
       return {
         key,
         label: t(`billing.plans.limit.${key}`),
-        value: !quota
-          ? t("billing.plans.unlimited")
-          : key === "storage"
-            ? formatBytes(quota.hard)
-            : new Intl.NumberFormat(locale.value).format(quota.hard),
+        value:
+          module && !option.modules.includes(module)
+            ? t("billing.plans.notIncluded")
+            : !quota
+              ? t("billing.plans.unlimited")
+              : key === "storage"
+                ? formatBytes(quota.hard, locale.value)
+                : formatCount(quota.hard, locale.value),
       };
     },
   );
 }
 
+function isPendingTarget(option: PlanOption): boolean {
+  return plan.value?.pendingChange?.toTier === option.tier;
+}
+
 function actionLabel(option: PlanOption): string {
-  if (option.action === "upgrade") return t("billing.plans.upgradeNow");
+  // A paid plan that drops features is a change, not an upgrade.
+  if (option.action === "upgrade") {
+    return option.lostModules.length
+      ? t("billing.plans.changeNow")
+      : t("billing.plans.upgradeNow");
+  }
   if (option.action === "downgrade") {
     return option.effective === "immediately" || option.effectiveAt === null
       ? t("billing.plans.downgradeNow")
@@ -508,8 +551,9 @@ async function loadSummary() {
 }
 
 async function loadPlan() {
+  if (needsRestaurant.value) return;
   try {
-    plan.value = await planService.getPlan();
+    plan.value = await planService.getPlan(actingRestaurantId.value);
     planLoadFailed.value = false;
   } catch {
     planLoadFailed.value = true;
@@ -534,10 +578,10 @@ async function reportError(caught: unknown) {
   if (!key) return;
   markErrorHandled(caught);
   toast.error(t(key));
-  // Someone else changed it, or it is already gone: show what is true now.
-  if (code === "PLAN_CHANGE_CONFLICT" || code === "PLAN_NO_PENDING_CHANGE") {
-    await loadPlan();
-  }
+  // Whatever the refusal, show what is true now.
+  // This covers PLAN_UNCHANGED too: asking for the current plan while a
+  // downgrade is pending is refused, and the page may be stale.
+  await loadPlan();
 }
 
 function buildConfirm(option: PlanOption, impact: PlanImpact) {
@@ -549,6 +593,9 @@ function buildConfirm(option: PlanOption, impact: PlanImpact) {
           date: formatDate(option.effectiveAt as number),
         })
       : t("billing.confirm.effectiveNow"),
+    cycleEnd
+      ? t("billing.confirm.usageFreshScheduled")
+      : t("billing.confirm.usageFresh"),
     plan.value?.currentTier === "trial"
       ? t("billing.confirm.trialNoReturn")
       : "",
@@ -602,9 +649,10 @@ function buildConfirm(option: PlanOption, impact: PlanImpact) {
         : ("warning" as const),
     title: t("billing.confirm.title", { plan: plan_ }),
     message,
-    confirmLabel:
-      option.action === "downgrade"
-        ? t("billing.confirm.confirmDowngrade")
+    confirmLabel: cycleEnd
+      ? t("billing.confirm.confirmScheduleDowngrade")
+      : lost.length
+        ? t("billing.confirm.confirmChange")
         : t("billing.confirm.confirmUpgrade"),
     sections,
     confirmDisabled: blocking.length > 0,
@@ -620,7 +668,10 @@ async function startChange(option: PlanOption) {
   try {
     let impact: PlanImpact;
     try {
-      impact = await planService.getImpact(option.tier);
+      impact = await planService.getImpact(
+        option.tier,
+        actingRestaurantId.value,
+      );
     } catch (caught) {
       await reportError(caught);
       return;
@@ -628,7 +679,7 @@ async function startChange(option: PlanOption) {
     if (!(await confirm(buildConfirm(option, impact)))) return;
 
     try {
-      await planService.changePlan(option.tier);
+      await planService.changePlan(option.tier, actingRestaurantId.value);
     } catch (caught) {
       await reportError(caught);
       return;
@@ -659,7 +710,7 @@ async function cancelPending() {
   if (!confirmed) return;
   busy.value = true;
   try {
-    await planService.cancelPending();
+    await planService.cancelPending(actingRestaurantId.value);
     await loadPlan();
     toast.success(t("billing.pending.cancelled"));
   } catch (caught) {

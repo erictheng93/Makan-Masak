@@ -6525,7 +6525,7 @@ const jaJP: Messages = {
       api_requests: "API リクエスト",
       print_jobs: "印刷ジョブ",
       ai_requests: "AI リクエスト",
-      storage_bytes: "ストレージ（バイト）",
+      storage_bytes: "ストレージ",
     },
     quota: {
       viewPlans: "プランを見る",
@@ -6548,6 +6548,8 @@ const jaJP: Messages = {
         "プラン情報を読み込めませんでした。しばらくしてからもう一度お試しください。",
       unlimited: "無制限",
       upgradeNow: "今すぐアップグレード",
+      notIncluded: "含まれません",
+      changeNow: "今すぐ変更",
       downgradeNow: "今すぐダウングレード",
       scheduleDowngrade: "ダウングレードを予約（{date} に反映）",
       unavailable: "選択できません",
@@ -6585,8 +6587,12 @@ const jaJP: Messages = {
       blocking: "先に対応が必要です",
       impact: "変更後の影響",
       goToPos: "POS でシフトを終了する",
+      confirmChange: "変更を確定",
+      confirmScheduleDowngrade: "ダウングレードの予約を確定",
+      usageFresh: "今期の利用量は 0 から再計算されます。",
+      usageFreshScheduled:
+        "新しいプランの利用量は、反映日から改めて計算されます。",
       confirmUpgrade: "アップグレードを確定",
-      confirmDowngrade: "ダウングレードを確定",
     },
     impact: {
       open_cash_shift:
@@ -6603,8 +6609,6 @@ const jaJP: Messages = {
       tracked_ingredients: "食材 {count} 件の在庫管理が停止します",
       connected_platforms:
         "連携中のデリバリープラットフォーム {count} 件が切断されます",
-      usage_over_new_limit:
-        "{count} 項目の今期の利用量が新プランの上限を超えています",
     },
     errors: {
       unchanged: "すでにこのプランをご利用中です。",

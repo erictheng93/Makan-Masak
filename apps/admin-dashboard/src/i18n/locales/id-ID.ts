@@ -6565,7 +6565,7 @@ const idID: Messages = {
       api_requests: "Permintaan API",
       print_jobs: "Tugas cetak",
       ai_requests: "Permintaan AI",
-      storage_bytes: "Penyimpanan (byte)",
+      storage_bytes: "Penyimpanan",
     },
     quota: {
       viewPlans: "Lihat paket",
@@ -6589,6 +6589,8 @@ const idID: Messages = {
       loadFailed: "Informasi paket tidak dapat dimuat. Coba lagi nanti.",
       unlimited: "Tanpa batas",
       upgradeNow: "Upgrade sekarang",
+      notIncluded: "Tidak termasuk",
+      changeNow: "Ganti sekarang",
       downgradeNow: "Downgrade sekarang",
       scheduleDowngrade: "Jadwalkan downgrade, berlaku {date}",
       unavailable: "Tidak tersedia",
@@ -6626,8 +6628,12 @@ const idID: Messages = {
       blocking: "Selesaikan ini dahulu",
       impact: "Yang akan berubah",
       goToPos: "Buka POS untuk menutup shift",
+      confirmChange: "Konfirmasi perubahan",
+      confirmScheduleDowngrade: "Konfirmasi jadwal downgrade",
+      usageFresh: "Penggunaan periode ini akan dihitung ulang dari 0.",
+      usageFreshScheduled:
+        "Penggunaan pada paket baru dihitung ulang sejak tanggal berlaku.",
       confirmUpgrade: "Konfirmasi upgrade",
-      confirmDowngrade: "Konfirmasi downgrade",
     },
     impact: {
       open_cash_shift:
@@ -6644,8 +6650,6 @@ const idID: Messages = {
       tracked_ingredients: "Stok {count} bahan tidak akan dilacak lagi",
       connected_platforms:
         "{count} platform pengiriman yang terhubung akan diputus",
-      usage_over_new_limit:
-        "{count} meter penggunaan periode ini sudah melebihi batas paket baru",
     },
     errors: {
       unchanged: "Anda sudah menggunakan paket ini.",
