@@ -22,9 +22,11 @@ import {
   markets,
   orders,
   restaurants,
+  shopSubscriptions,
 } from "@makanmasak/database";
 import { eq } from "drizzle-orm";
 import type { Env } from "../../types/env";
+import { invalidateSubscriptionCacheForEnv } from "../../middleware/moduleGate";
 import {
   MarketCheckoutVoucherService,
   redeemCachedMarketCheckoutVoucher,
@@ -224,6 +226,59 @@ describe("MarketCheckoutVoucherService — validateAndPrice", () => {
         childOrders: [{ orderId: "101", amountCents: 24000 }],
       }),
     ).rejects.toMatchObject({ code: "VOUCHER_NOT_APPLICABLE" });
+  });
+
+  it.each([
+    ["applies", "pro"],
+    ["refuses", "basic"],
+  ] as const)(
+    "%s a shop's own voucher on its child order when the plan is %s",
+    async (_outcome, planTier) => {
+      await seedRestaurant("restaurant-1");
+      await testDb.drizzle
+        .insert(shopSubscriptions)
+        .values({ restaurantId: "restaurant-1", planTier });
+      // KV outlives truncateAll; drop the plan the previous case cached.
+      await invalidateSubscriptionCacheForEnv(makeEnv(), "restaurant-1");
+      await seedCoupon({ code: "SHOP10", restaurantId: "restaurant-1" });
+      const price = makeService().validateAndPrice({
+        currency: "TWD",
+        code: "SHOP10",
+        subtotalCents: 24000,
+        childOrders: [
+          { orderId: "101", amountCents: 16000, restaurantId: "restaurant-1" },
+          { orderId: "102", amountCents: 8000, restaurantId: "restaurant-2" },
+        ],
+      });
+
+      if (planTier === "pro") {
+        await expect(price).resolves.toMatchObject({ discountCents: 1600 });
+      } else {
+        await expect(price).rejects.toMatchObject({
+          code: "VOUCHER_NOT_APPLICABLE",
+        });
+      }
+    },
+  );
+
+  it("still applies a platform voucher at a shop without the coupons module", async () => {
+    await seedRestaurant("restaurant-1");
+    await testDb.drizzle
+      .insert(shopSubscriptions)
+      .values({ restaurantId: "restaurant-1", planTier: "basic" });
+    await invalidateSubscriptionCacheForEnv(makeEnv(), "restaurant-1");
+    await seedCoupon({ code: "MARKET10", discountPercentageBps: 1000 });
+
+    const applied = await makeService().validateAndPrice({
+      currency: "TWD",
+      code: "MARKET10",
+      subtotalCents: 16000,
+      childOrders: [
+        { orderId: "101", amountCents: 16000, restaurantId: "restaurant-1" },
+      ],
+    });
+
+    expect(applied.discountCents).toBe(1600);
   });
 
   it("rejects when the subtotal is below the minimum order", async () => {

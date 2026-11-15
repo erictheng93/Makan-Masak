@@ -268,24 +268,93 @@ describe("diner endpoints after a module downgrade", () => {
     expect(cancelled.status).toBe(200);
   });
 
-  it("coupons: validate and available answer while the shop has the module, and are refused after", async () => {
-    const coupon = await seed.coupon(restaurantId);
-    const validate = () =>
+  it("coupons: the shop's own stop after a downgrade, platform promotions keep working", async () => {
+    const shopCoupon = await seed.coupon(restaurantId);
+    const platformCoupon = await seed.coupon(restaurantId, {
+      restaurantId: null,
+    });
+    const validate = (code: string) =>
       send("/coupons/validate", {
         method: "POST",
-        body: { code: coupon.code, restaurantId, orderAmount: 500 },
+        body: { code, restaurantId, orderAmount: 500 },
       });
+    const availableIds = async () =>
+      (
+        await readData<Array<{ id: number }>>(
+          await send(`/coupons/available/${restaurantId}`),
+        )
+      ).map((coupon) => coupon.id);
 
-    expect((await validate()).status).toBe(200);
-    expect((await send(`/coupons/available/${restaurantId}`)).status).toBe(200);
+    expect((await validate(shopCoupon.code)).status).toBe(200);
+    expect((await availableIds()).sort()).toEqual(
+      [shopCoupon.id, platformCoupon.id].sort(),
+    );
 
     await downgradeToBasic();
 
-    await expectModuleRefusal(await validate());
-    await expectModuleRefusal(await send(`/coupons/available/${restaurantId}`));
+    await expectModuleRefusal(await validate(shopCoupon.code));
+    const platform = await validate(platformCoupon.code);
+    expect(platform.status).toBe(200);
+    expect(await readData<{ valid: boolean }>(platform)).toMatchObject({
+      valid: true,
+    });
+    expect(await availableIds()).toEqual([platformCoupon.id]);
   });
 
-  it("answers an unknown restaurant with a 4xx, never a 500", async () => {
+  it("service booking: a shop voucher needs coupons, a platform voucher does not", async () => {
+    await testApp.testDb.drizzle
+      .update(shopSubscriptions)
+      .set({ planTier: "basic", moduleOverrides: { reservations: true } })
+      .where(eq(shopSubscriptions.restaurantId, restaurantId));
+    await invalidateSubscriptionCacheForEnv(testApp.env, restaurantId);
+    const [item] = await testApp.testDb.drizzle
+      .insert(restaurantServiceItems)
+      .values({
+        restaurantId,
+        name: "Lantern Painting",
+        serviceType: "activity",
+        requiresBooking: true,
+        priceCents: 15000,
+        paymentRequirement: "pay_at_venue",
+        durationMinutes: 60,
+      })
+      .returning({ id: restaurantServiceItems.id });
+    await testApp.testDb.drizzle.insert(serviceBookingSlots).values({
+      restaurantId,
+      serviceItemId: item.id,
+      date: DATE,
+      timeSlot: "14:00",
+      maxCapacity: 5,
+    });
+    const shopVoucher = await seed.coupon(restaurantId);
+    const platformVoucher = await seed.coupon(restaurantId, {
+      restaurantId: null,
+      discountType: "fixed",
+      discountValueCents: 2000,
+    });
+    const book = (voucherCode: string, phone: string) =>
+      send("/service-bookings", {
+        method: "POST",
+        body: {
+          restaurantId,
+          serviceItemId: item.id,
+          customerName: "Diner",
+          customerPhone: phone,
+          bookingDate: DATE,
+          bookingTime: "14:00",
+          voucherCode,
+        },
+      });
+
+    const refused = await book(shopVoucher.code, "0911222333");
+    expect(refused.status).toBe(400);
+    expect(await readError(refused)).toMatchObject({
+      code: "VOUCHER_NOT_APPLICABLE",
+    });
+    expect((await book(platformVoucher.code, "0911222444")).status).toBe(201);
+  });
+
+  it("never answers an unknown restaurant with a 500", async () => {
     const unknown = "no-such-restaurant";
     const responses = await Promise.all([
       send("/reservations", {
@@ -320,8 +389,8 @@ describe("diner endpoints after a module downgrade", () => {
       }),
     ]);
 
+    // Coupon reads may answer 200 (platform promotions only); the rest 4xx.
     for (const response of responses) {
-      expect(response.status).toBeGreaterThanOrEqual(400);
       expect(response.status).toBeLessThan(500);
     }
   });

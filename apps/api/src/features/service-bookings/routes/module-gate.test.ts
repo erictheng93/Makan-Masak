@@ -305,21 +305,6 @@ describe("public service-bookings routes and the reservations module", () => {
     expect(joinWaitlist).not.toHaveBeenCalled();
   });
 
-  it("refuses a voucher where the shop has reservations but not coupons", async () => {
-    const res = await req(
-      "/",
-      "POST",
-      envWithSubscription("rest-basic", "basic", { reservations: true }),
-      { ...bookingBody, restaurantId: "rest-basic", voucherCode: "SAVE10" },
-    );
-
-    expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toMatchObject({
-      error: { code: "VOUCHER_NOT_APPLICABLE" },
-    });
-    expect(createBooking).not.toHaveBeenCalled();
-  });
-
   it("still serves an existing booking's lookup, cancel and payment with the module gone", async () => {
     getByConfirmationCode.mockResolvedValue({ id: "booking-1" });
     cancelByConfirmationCode.mockResolvedValue({ id: "booking-1" });

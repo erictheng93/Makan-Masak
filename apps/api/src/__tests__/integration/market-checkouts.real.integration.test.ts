@@ -13,6 +13,7 @@ import {
   paymentTransactions,
   restaurantMarketMemberships,
   restaurants,
+  shopSubscriptions,
 } from "@makanmasak/database";
 import {
   createRealIntegrationTestApp,
@@ -131,6 +132,11 @@ async function seedVendorVoucher(
   code: string,
   restaurantId: string,
 ) {
+  // A shop's own voucher needs the shop's `coupons` module.
+  await testApp.testDb.drizzle
+    .insert(shopSubscriptions)
+    .values({ restaurantId, planTier: "pro" })
+    .onConflictDoNothing();
   const [coupon] = await testApp.testDb.drizzle
     .insert(coupons)
     .values({

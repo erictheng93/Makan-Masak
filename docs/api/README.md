@@ -402,7 +402,7 @@ Join, queue-status and estimate-wait answer 403 `MODULE_NOT_ENABLED` when the re
 
 ### Coupons (`/coupons`) — 13 routes
 
-Validate and available answer 403 `MODULE_NOT_ENABLED` when the restaurant's plan lacks `coupons`, and order creation (`/orders`, `/guest-orders`, `/orders/preview-coupon`) refuses a coupon there with 400 `COUPON_INVALID`.
+The `coupons` module governs a shop's own coupons (`restaurant_id` set); platform coupons (`restaurant_id` NULL) work at every shop. Where the plan lacks `coupons`, validate answers 403 `MODULE_NOT_ENABLED` for a shop coupon, available lists platform coupons only, order creation (`/orders`, `/guest-orders`, `/orders/preview-coupon`) refuses a shop coupon with 400 `COUPON_INVALID`, and a market-checkout voucher owned by that shop gets 400 `VOUCHER_NOT_APPLICABLE`.
 
 | Method | Path                               | Description    | Auth      |
 | ------ | ---------------------------------- | -------------- | --------- |
@@ -669,6 +669,8 @@ agent's restaurant and register scope.
 | GET    | `/leaves/:restaurantId/working-day/:date` | 查詢工作日   | Protected |
 
 ### Integrations (`/integrations`) — 10 routes
+
+The admin routes need `platform_integration`, except `GET` and `DELETE /integrations/:restaurantId/:platform`, which stay open to the owner so a shop that lost the module can still see and disconnect an integration.
 
 **管理端：**
 
@@ -945,7 +947,7 @@ so a token can never be replayed against a different room.
 
 ### Service Bookings (`/service-bookings`) — 21 routes
 
-Availability, create, recurring and waitlist answer 403 `MODULE_NOT_ENABLED` when the restaurant's plan lacks `reservations` (a voucher on create needs `coupons`, else 400 `VOUCHER_NOT_APPLICABLE`); pay, verify, ICS and cancel stay open for existing bookings.
+Availability, create, recurring and waitlist answer 403 `MODULE_NOT_ENABLED` when the restaurant's plan lacks `reservations` (a shop-owned voucher on create needs `coupons`, else 400 `VOUCHER_NOT_APPLICABLE`; platform vouchers always apply); pay, verify, ICS and cancel stay open for existing bookings.
 
 | Method | Path | Description | Auth |
 | ------ | ---- | ----------- | ---- |

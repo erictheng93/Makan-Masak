@@ -33,6 +33,8 @@ import type {
 
 interface AvailableCoupon {
   id: number;
+  /** Null for a platform promotion. */
+  restaurantId?: string | null;
   discountType: string;
   discountValue: number;
   discountPercentageBps?: number | null;

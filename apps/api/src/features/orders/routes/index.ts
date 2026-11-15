@@ -255,7 +255,9 @@ app.post(
   async (c) => {
     const data: CouponPreviewInput = c.get("validatedBody");
     const user: AuthUser = c.get("user");
-    await assertOrderCouponsAllowed(c.env, data.restaurantId, true);
+    await assertOrderCouponsAllowed(c.env, data.restaurantId, [
+      data.couponCode,
+    ]);
     const ordersService = new OrdersService(c.env);
 
     logger.info("Previewing coupon", {
@@ -392,7 +394,7 @@ app.post(
     await assertOrderCouponsAllowed(
       c.env,
       data.restaurantId,
-      Boolean(data.couponCode || data.couponCodes?.length),
+      data.couponCodes ?? (data.couponCode ? [data.couponCode] : []),
     );
 
     // Transform data for service

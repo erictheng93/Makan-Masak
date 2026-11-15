@@ -32,6 +32,7 @@ import {
   type CurrencyCode,
 } from "@makanmasak/utils";
 import type { Env } from "../../../types/env";
+import { couponsModuleEnabled } from "../../coupons/services/coupons-module";
 import { badRequest, notFound } from "../../../shared/utils/api-error";
 import { fromCents, percentageFromBps } from "../../../shared/utils/money";
 
@@ -96,7 +97,7 @@ export class MarketCheckoutVoucherService {
   // instance does not match.
   private readonly businessTimezone;
 
-  constructor(env: Env) {
+  constructor(private readonly env: Env) {
     this.db = drizzle(env.DB);
     this.businessTimezone = new BusinessTimezoneResolver(this.db);
   }
@@ -236,6 +237,17 @@ export class MarketCheckoutVoucherService {
     if (applicableChildOrders.length === 0) {
       throw badRequest(
         "This voucher can only be used at its own shop",
+        "VOUCHER_NOT_APPLICABLE",
+      );
+    }
+    // A shop's own voucher needs the shop's `coupons` module; platform
+    // vouchers are the platform's promotion and apply regardless.
+    if (
+      coupon.restaurantId != null &&
+      !(await couponsModuleEnabled(this.env, coupon.restaurantId))
+    ) {
+      throw badRequest(
+        "This voucher is not available",
         "VOUCHER_NOT_APPLICABLE",
       );
     }

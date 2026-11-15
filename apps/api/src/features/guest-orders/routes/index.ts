@@ -199,7 +199,7 @@ app.post(
     await assertOrderCouponsAllowed(
       c.env,
       data.restaurantId,
-      Boolean(data.couponCode || data.couponCodes?.length),
+      data.couponCodes ?? (data.couponCode ? [data.couponCode] : []),
     );
 
     // 4. Create order via OrdersService

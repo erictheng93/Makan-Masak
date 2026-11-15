@@ -15,7 +15,7 @@ import type { AuthUser } from "../../../middleware/auth";
 import { moduleGate } from "../../../middleware/moduleGate";
 import { rateLimitMiddleware } from "../../../middleware/rateLimiter";
 import { resolveRestaurantIdFromJsonBody } from "../../../shared/utils/request-restaurant";
-import { couponsModuleEnabled } from "../../coupons/services/coupons-module";
+import { refusesShopCoupons } from "../../coupons/services/coupons-module";
 import type { Env } from "../../../types/env";
 import {
   badRequest,
@@ -239,7 +239,9 @@ app.post("/", reservationsGateByBody, async (c) => {
   }
   if (
     parsed.data.voucherCode &&
-    !(await couponsModuleEnabled(c.env, parsed.data.restaurantId))
+    (await refusesShopCoupons(c.env, parsed.data.restaurantId, [
+      parsed.data.voucherCode,
+    ]))
   ) {
     throw badRequest("This voucher does not apply", "VOUCHER_NOT_APPLICABLE");
   }

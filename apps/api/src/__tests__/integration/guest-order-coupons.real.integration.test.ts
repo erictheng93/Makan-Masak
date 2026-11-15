@@ -53,7 +53,7 @@ describe("Guest coupon checkout — real D1 (#382)", () => {
     await testApp?.dispose();
   });
 
-  it("refuses a coupon at a shop whose plan lacks coupons, and still takes the plain order", async () => {
+  it("refuses a shop coupon at a shop whose plan lacks coupons, but takes a platform one", async () => {
     const shop = await seedShop("basic");
     const coupon = await seed.coupon(shop.restaurantId, {
       discountType: "fixed",
@@ -71,8 +71,19 @@ describe("Guest coupon checkout — real D1 (#382)", () => {
 
     const plain = await postOrder(shop, undefined);
     expect(plain.status).toBe(201);
-    const created = await readData<CreatedOrder>(plain);
-    expect(created.order.discountAmount).toBe(0);
+    expect((await readData<CreatedOrder>(plain)).order.discountAmount).toBe(0);
+
+    // The module governs the shop's own programme, not platform promotions.
+    const platformCoupon = await seed.coupon(shop.restaurantId, {
+      restaurantId: null,
+      discountType: "fixed",
+      discountValueCents: 2000,
+    });
+    const promoted = await postOrder(shop, platformCoupon.code, DEVICE_B);
+    expect(promoted.status).toBe(201);
+    expect((await readData<CreatedOrder>(promoted)).order.discountAmount).toBe(
+      20,
+    );
   });
 
   it.each([
