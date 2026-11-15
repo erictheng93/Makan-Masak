@@ -182,6 +182,10 @@
     {
       "fresh": "0045_user_auth_identities_multi_shop.sql",
       "reason": "Changes an index on the platform-only user_auth_identities table (0044)."
+    },
+    {
+      "fresh": "0046_restaurant_expenses.sql",
+      "reason": "restaurant_expenses feeds the platform API's daily P&L statement; the management API has no orders or restaurant ledger to pair against."
     }
   ],
   "legacyOnly": [

@@ -68,7 +68,7 @@ export interface AvailableHours {
 
 // Extended Menu Item Entity (extending shared type)
 export interface MenuItem extends SharedMenuItem {
-  costPrice?: number;
+  costPrice?: number | null;
   minInventoryAlert?: number | null;
   availableHours?: AvailableHours;
   rating?: number;
@@ -152,6 +152,7 @@ export interface CreateMenuItemData extends Omit<
 > {
   description?: string | null;
   originalPrice?: number | null;
+  costPrice?: number | null;
   catalogType?: "menu_item" | "product";
   imageUrl?: string | null;
   imageId?: string | null;
@@ -171,7 +172,7 @@ export interface UpdateMenuItemData extends Omit<
   // Nullable for the same reason as CreateMenuItemData — see the note there.
   description?: string | null;
   originalPrice?: number | null;
-  costPrice?: number;
+  costPrice?: number | null;
   catalogType?: "menu_item" | "product";
   imageId?: string | null;
   sortOrder?: number;

@@ -58,6 +58,7 @@ interface MenuItemFormState {
   description: string;
   price: number;
   originalPrice: number | undefined;
+  costPrice: number | undefined;
   ingredients: string;
   spiceLevel: number;
   // MenuView.vue declares this as `number` because the initial value is 15,
@@ -795,6 +796,62 @@ describe("MenuView", () => {
         areaCity: "台中市",
         areaDistrict: "西屯區",
       },
+    });
+  });
+
+  describe("cost field", () => {
+    const costInput = (wrapper: ReturnType<typeof mountMenuView>) =>
+      wrapper.get<HTMLInputElement>('[data-testid="menu-item-cost-input"]');
+    const submit = async (wrapper: ReturnType<typeof mountMenuView>) => {
+      await wrapper.get('[data-testid="item-modal"] form').trigger("submit");
+      await flushPromises();
+    };
+
+    it("loads the stored cost when editing and saves it back unchanged", async () => {
+      const wrapper = mountMenuView();
+      await editItem(wrapper, menuItem({ costPrice: 2500 }));
+
+      expect(costInput(wrapper).element.value).toBe("2500");
+      await submit(wrapper);
+
+      expect(saveMenuItem).toHaveBeenCalledWith(
+        expect.objectContaining({ costPrice: 2500 }),
+        1,
+      );
+    });
+
+    it("sends null for a blank cost but keeps 0 as a real cost", async () => {
+      const wrapper = mountMenuView();
+      await editItem(wrapper, menuItem({ costPrice: 2500 }));
+
+      await costInput(wrapper).setValue("");
+      await submit(wrapper);
+      expect(saveMenuItem).toHaveBeenLastCalledWith(
+        expect.objectContaining({ costPrice: null }),
+        1,
+      );
+
+      // A successful save closes the modal; reopen to try the other value.
+      await editItem(wrapper, menuItem({ costPrice: 2500 }));
+      await costInput(wrapper).setValue("0");
+      await submit(wrapper);
+      expect(saveMenuItem).toHaveBeenLastCalledWith(
+        expect.objectContaining({ costPrice: 0 }),
+        1,
+      );
+    });
+
+    it("steps the cost input by the currency unit like the price", async () => {
+      setRestaurantCurrency("MYR");
+      const wrapper = mountMenuView();
+      await wrapper
+        .findAll("button")
+        .find((button) => button.text().includes("menu.addItem"))!
+        .trigger("click");
+
+      expect(costInput(wrapper).attributes("step")).toBe("0.01");
+      wrapper.unmount();
+      clearRestaurantCurrency();
     });
   });
 

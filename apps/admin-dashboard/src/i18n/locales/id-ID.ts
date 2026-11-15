@@ -201,6 +201,7 @@ const idID: Messages = {
     },
     form: {
       originalPrice: "Harga Asli",
+      costPrice: "Harga pokok",
       productDetails: "Detail Produk",
       spiceLevel: "Tingkat Kepedasan (0–5)",
       preparationTime: "Waktu Persiapan (menit)",
@@ -1909,6 +1910,69 @@ const idID: Messages = {
       expired: "Kedaluwarsa",
     },
   },
+  dailyPnl: {
+    title: "Laporan laba rugi harian",
+    description:
+      "Satu laporan per hari: pendapatan, harga pokok penjualan, dan biaya operasional, supaya terlihat hari ini untung atau rugi.",
+    date: "Tanggal",
+    noRestaurant: "Pilih restoran terlebih dahulu.",
+    revenue: {
+      title: "Pendapatan",
+      grossSales: "Total penjualan",
+      discount: "Diskon",
+      refund: "Pengembalian dana",
+      net: "Pendapatan bersih",
+      taxService: "Termasuk pajak {tax} / biaya layanan {service}",
+      orders: "{count} pesanan",
+    },
+    cogs: {
+      title: "Harga pokok penjualan",
+      grossProfit: "Laba kotor",
+      grossMargin: "Margin kotor",
+    },
+    expenses: {
+      title: "Biaya operasional",
+      empty: "Belum ada biaya operasional pada hari ini",
+      category: "Kategori",
+      amount: "Jumlah ({symbol})",
+      note: "Catatan (opsional)",
+      add: "Tambah biaya",
+      delete: "Hapus biaya",
+      deleteTitle: "Hapus biaya",
+      deleteMessage: "Hapus biaya {category} sebesar {amount} ini?",
+      categories: {
+        labor: "Tenaga kerja",
+        rent: "Sewa",
+        utilities: "Utilitas",
+        purchase: "Pembelian",
+        misc: "Lain-lain",
+      },
+    },
+    net: {
+      title: "Laba rugi hari ini",
+      profit: "Laba",
+      loss: "Rugi",
+    },
+    warning: {
+      missingCost:
+        "{count} item terjual belum memiliki harga pokok, laba kotor mungkin terlalu tinggi",
+      manageMenu: "Atur harga pokok di manajemen menu",
+    },
+    costNote:
+      "Harga pokok penjualan memakai harga pokok SAAT INI dari setiap item, jadi mengubah harga pokok juga mengubah laba kotor hari-hari sebelumnya.",
+    toast: {
+      added: "Biaya ditambahkan.",
+      deleted: "Biaya dihapus.",
+    },
+    errors: {
+      loadFailed: "Tidak dapat memuat laporan. Silakan coba lagi.",
+      precision: "Jumlah itu bukan kelipatan satuan terkecil mata uang ini.",
+      notFound: "Biaya tidak ditemukan, mungkin sudah dihapus.",
+      addFailed: "Tidak dapat menambah biaya. Silakan coba lagi.",
+      deleteFailed: "Tidak dapat menghapus biaya. Silakan coba lagi.",
+      amountInvalid: "Masukkan jumlah lebih dari 0.",
+    },
+  },
   reviews: {
     title: "Ulasan pelanggan",
     description:
@@ -2035,6 +2099,7 @@ const idID: Messages = {
   },
 
   nav: {
+    dailyPnl: "Laba rugi harian",
     reviews: "Ulasan",
     broadcasts: "Pesan dorong",
     billing: "Paket & Pemakaian",
@@ -2087,6 +2152,7 @@ const idID: Messages = {
   },
   pages: {
     marketOpenReport: "Open-day report",
+    dailyPnl: "Laporan laba rugi harian",
     reviews: "Ulasan pelanggan",
     broadcasts: "Pesan dorong",
     billing: "Paket & Pemakaian",

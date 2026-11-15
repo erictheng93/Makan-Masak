@@ -208,6 +208,7 @@ const enUS: Messages = {
       itemName: "Item Name",
       price: "Price",
       originalPrice: "Original Price",
+      costPrice: "Cost",
       productDetails: "Product Details",
       spiceLevel: "Spice Level (0–5)",
       preparationTime: "Preparation Time (minutes)",
@@ -1892,6 +1893,69 @@ const enUS: Messages = {
       expired: "Expired",
     },
   },
+  dailyPnl: {
+    title: "Daily P&L statement",
+    description:
+      "One statement per day: revenue, cost of goods and operating expenses, so you can see whether today made or lost money.",
+    date: "Date",
+    noRestaurant: "Select a restaurant first.",
+    revenue: {
+      title: "Revenue",
+      grossSales: "Gross sales",
+      discount: "Discounts",
+      refund: "Refunds",
+      net: "Net revenue",
+      taxService: "Incl. tax {tax} / service charge {service}",
+      orders: "{count} orders",
+    },
+    cogs: {
+      title: "Cost of goods sold",
+      grossProfit: "Gross profit",
+      grossMargin: "Gross margin",
+    },
+    expenses: {
+      title: "Operating expenses",
+      empty: "No operating expenses for this day",
+      category: "Category",
+      amount: "Amount ({symbol})",
+      note: "Note (optional)",
+      add: "Add expense",
+      delete: "Delete expense",
+      deleteTitle: "Delete expense",
+      deleteMessage: "Delete this {category} expense of {amount}?",
+      categories: {
+        labor: "Labor",
+        rent: "Rent",
+        utilities: "Utilities",
+        purchase: "Purchases",
+        misc: "Miscellaneous",
+      },
+    },
+    net: {
+      title: "Net profit for the day",
+      profit: "Profit",
+      loss: "Loss",
+    },
+    warning: {
+      missingCost:
+        "{count} sold items have no cost set, so gross profit may be overstated",
+      manageMenu: "Set costs in menu management",
+    },
+    costNote:
+      "Cost of goods uses each item's current cost, so changing a cost also changes the gross profit of past days.",
+    toast: {
+      added: "Expense added.",
+      deleted: "Expense deleted.",
+    },
+    errors: {
+      loadFailed: "Could not load the statement. Please try again.",
+      precision: "That amount is not a valid step for this currency.",
+      notFound: "That expense was not found. It may already be deleted.",
+      addFailed: "Could not add the expense. Please try again.",
+      deleteFailed: "Could not delete the expense. Please try again.",
+      amountInvalid: "Enter an amount greater than 0.",
+    },
+  },
   reviews: {
     title: "Customer reviews",
     description:
@@ -2015,6 +2079,7 @@ const enUS: Messages = {
   },
 
   nav: {
+    dailyPnl: "Daily P&L",
     reviews: "Reviews",
     broadcasts: "Push messages",
     billing: "Plan & Usage",
@@ -2067,6 +2132,7 @@ const enUS: Messages = {
   },
   pages: {
     marketOpenReport: "Open-day report",
+    dailyPnl: "Daily P&L statement",
     reviews: "Customer reviews",
     broadcasts: "Push messages",
     billing: "Plan & Usage",

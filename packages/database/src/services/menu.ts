@@ -58,6 +58,8 @@ export interface CreateMenuItemData {
   ingredients?: string | null;
   price: number;
   originalPrice?: number | null;
+  /** Major units; null/absent = "not set" (distinct from 0). */
+  costPrice?: number | null;
   imageUrl?: string | null;
   imageVariants?: typeof menuItems.$inferInsert.imageVariants;
   imageId?: string | null;
@@ -140,11 +142,15 @@ export interface MenuItemOptionGroupState {
  * for items with no option-group links.
  */
 function menuItemMoneyFields(
-  data: Pick<UpdateMenuItemData, "price" | "originalPrice" | "options">,
+  data: Pick<
+    UpdateMenuItemData,
+    "price" | "originalPrice" | "costPrice" | "options"
+  >,
 ): CurrencyPrecisionField[] {
   const fields: CurrencyPrecisionField[] = [
     { field: "price", cents: toCents(data.price) },
     { field: "originalPrice", cents: toCents(data.originalPrice) },
+    { field: "costPrice", cents: toCents(data.costPrice) },
   ];
   const options = data.options;
   options?.sizes?.forEach((size, index) =>
@@ -736,11 +742,12 @@ export class MenuService extends BaseService {
 
   /** Row shape for an insert, with the money columns and flag defaults applied. */
   private toMenuItemInsertValues(data: CreateMenuItemData) {
-    const { price, originalPrice, ...insertData } = data;
+    const { price, originalPrice, costPrice, ...insertData } = data;
     return {
       ...insertData,
       priceCents: toRequiredCents(price),
       originalPriceCents: toCents(originalPrice),
+      costPriceCents: toCents(costPrice),
       isAvailable: data.isAvailable !== undefined ? data.isAvailable : true, // Default: available
       isFeatured: data.isFeatured !== undefined ? data.isFeatured : false,
       isPopular: data.isPopular !== undefined ? data.isPopular : false,
@@ -887,6 +894,7 @@ export class MenuService extends BaseService {
       const {
         price,
         originalPrice,
+        costPrice,
         restaurantId: _restaurantId,
         ...updateData
       } = data;
@@ -904,6 +912,9 @@ export class MenuService extends BaseService {
             : {}),
           ...(originalPrice !== undefined
             ? { originalPriceCents: toCents(originalPrice) }
+            : {}),
+          ...(costPrice !== undefined
+            ? { costPriceCents: toCents(costPrice) }
             : {}),
           updatedAt: new Date(),
         })

@@ -196,6 +196,7 @@ const zhTWCore = {
     },
     form: {
       originalPrice: "原價",
+      costPrice: "成本",
       productDetails: "商品詳細資料",
       spiceLevel: "辣度（0–5）",
       preparationTime: "備餐時間（分鐘）",
@@ -1942,6 +1943,68 @@ const zhTWCore = {
     },
   },
   // 顧客評價（#286）
+  dailyPnl: {
+    title: "日帳損益表",
+    description:
+      "每天一張損益表：營收、銷貨成本、營業費用，一眼看出今天賺了還是賠了。",
+    date: "日期",
+    noRestaurant: "請先選擇餐廳。",
+    revenue: {
+      title: "營業收入",
+      grossSales: "銷售總額",
+      discount: "折扣",
+      refund: "退款",
+      net: "淨營收",
+      taxService: "含稅額 {tax}／服務費 {service}",
+      orders: "{count} 筆訂單",
+    },
+    cogs: {
+      title: "銷貨成本",
+      grossProfit: "毛利",
+      grossMargin: "毛利率",
+    },
+    expenses: {
+      title: "營業費用",
+      empty: "本日尚無營業費用",
+      category: "類別",
+      amount: "金額（{symbol}）",
+      note: "備註（選填）",
+      add: "新增費用",
+      delete: "刪除費用",
+      deleteTitle: "刪除費用",
+      deleteMessage: "確定要刪除「{category}」{amount} 這筆費用嗎？",
+      categories: {
+        labor: "人事",
+        rent: "租金",
+        utilities: "水電",
+        purchase: "進貨",
+        misc: "雜項",
+      },
+    },
+    net: {
+      title: "本日損益",
+      profit: "盈",
+      loss: "虧",
+    },
+    warning: {
+      missingCost: "{count} 項售出品項未設定成本，毛利可能被高估",
+      manageMenu: "前往菜單設定成本",
+    },
+    costNote:
+      "銷貨成本以各品項「目前」的成本計算，修改成本會連帶改變過去日期的毛利。",
+    toast: {
+      added: "已新增費用。",
+      deleted: "已刪除費用。",
+    },
+    errors: {
+      loadFailed: "無法載入損益表，請再試一次。",
+      precision: "金額不符合此幣別的最小單位。",
+      notFound: "找不到這筆費用，可能已被刪除。",
+      addFailed: "新增費用失敗，請再試一次。",
+      deleteFailed: "刪除費用失敗，請再試一次。",
+      amountInvalid: "請輸入大於 0 的金額。",
+    },
+  },
   reviews: {
     title: "顧客評價",
     description: "查看顧客對訂單與菜色的評分，並回覆尚未處理的評價。",
@@ -2059,6 +2122,7 @@ const zhTWCore = {
 
   // 導航
   nav: {
+    dailyPnl: "日帳損益表",
     reviews: "顧客評價",
     broadcasts: "推播訊息",
     billing: "訂閱與用量",
@@ -2112,6 +2176,7 @@ const zhTWCore = {
   // 頁面標題
   pages: {
     marketOpenReport: "開店紀錄",
+    dailyPnl: "日帳損益表",
     reviews: "顧客評價",
     broadcasts: "推播訊息",
     billing: "訂閱與用量",

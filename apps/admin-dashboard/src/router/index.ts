@@ -409,6 +409,17 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        // One day's revenue, cost of goods and expenses for this shop.
+        // Restaurant-scoped, so absent from adminRestaurantOptionalRoutes.
+        path: "daily-pnl",
+        name: "DailyPnl",
+        component: () => import("@/views/DailyPnlView.vue"),
+        meta: {
+          titleKey: "pages.dailyPnl",
+          roles: [UserRole.ADMIN, UserRole.OWNER],
+        },
+      },
+      {
         // Diner reviews of completed orders (#286). Distinct from
         // /dashboard/feedback, which is the platform's support-ticket queue —
         // #266 records the two being confused. This one is restaurant-scoped,

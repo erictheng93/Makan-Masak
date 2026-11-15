@@ -167,6 +167,16 @@ function mapOptionGroupMutationError(error: unknown): never {
   throw error;
 }
 
+/**
+ * costPrice is the owner's margin data. It rides only on the owner's own
+ * `includeAll` menu read (what the admin form loads); every diner-facing read
+ * drops it, because the mapper behind them returns the whole row.
+ */
+function withoutCost<T extends { costPrice?: unknown }>(item: T) {
+  const { costPrice: _costPrice, ...rest } = item;
+  return rest;
+}
+
 // Public Menu Routes (no authentication required)
 
 // GET /:restaurantId - Get complete menu (public API, optionally includes unavailable items for admins)
@@ -206,7 +216,13 @@ app.get(
     }
 
     if (!includeAll) {
-      return c.json(createSuccessResponse(menu), HTTP_STATUS.OK);
+      return c.json(
+        createSuccessResponse({
+          ...menu,
+          menuItems: menu.menuItems.map(withoutCost),
+        }),
+        HTTP_STATUS.OK,
+      );
     }
 
     // How many diners saved each dish is the owner's business, not the
@@ -241,7 +257,10 @@ app.get(
 
     const items = await service.getFeaturedItems(restaurantId, limit);
 
-    return c.json(createSuccessResponse(items), HTTP_STATUS.OK);
+    return c.json(
+      createSuccessResponse(items.map(withoutCost)),
+      HTTP_STATUS.OK,
+    );
   },
 );
 
@@ -261,7 +280,10 @@ app.get(
 
     const items = await service.getPopularItems(restaurantId, limit);
 
-    return c.json(createSuccessResponse(items), HTTP_STATUS.OK);
+    return c.json(
+      createSuccessResponse(items.map(withoutCost)),
+      HTTP_STATUS.OK,
+    );
   },
 );
 
@@ -307,7 +329,7 @@ app.get(
     return c.json(
       {
         success: true,
-        data: result.items,
+        data: result.items.map(withoutCost),
         pagination: result.pagination,
       },
       HTTP_STATUS.OK,
@@ -344,7 +366,18 @@ app.get(
       service.incrementViewCount(id).catch(() => undefined),
     );
 
-    return c.json(createSuccessResponse(item), HTTP_STATUS.OK);
+    const user = c.get("user");
+    const seesCost =
+      user &&
+      (user.role === USER_ROLES.ADMIN ||
+        (user.role === USER_ROLES.OWNER &&
+          user.restaurantId != null &&
+          String(user.restaurantId) === String(item.restaurantId)));
+
+    return c.json(
+      createSuccessResponse(seesCost ? item : withoutCost(item)),
+      HTTP_STATUS.OK,
+    );
   },
 );
 

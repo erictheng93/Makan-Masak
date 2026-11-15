@@ -115,6 +115,7 @@ import {
 import feedbackFeature from "./features/feedback";
 import alertsFeature from "./features/alerts";
 import reviewsFeature from "./features/reviews";
+import pnlFeature from "./features/pnl";
 import broadcastsFeature from "./features/broadcasts";
 import billingFeature from "./features/billing";
 import subscriptionsFeature from "./features/subscriptions";
@@ -464,6 +465,7 @@ export function createApp(
         markets: "/api/v1/markets",
         feedback: "/api/v1/feedback",
         reviews: "/api/v1/reviews",
+        pnl: "/api/v1/pnl",
         billing: "/api/v1/billing",
         manager: "/api/v1/manager",
         auditLogs: "/api/v1/audit-logs",
@@ -785,6 +787,7 @@ export function createApp(
   apiV1.route("/markets", broadcastsFeature.marketRoutes);
   apiV1.route("/feedback", feedbackFeature.routes);
   apiV1.route("/alerts", alertsFeature.routes); // 店主營運告警 (#285) — admin/owner only
+  apiV1.route("/pnl", pnlFeature.routes); // 日帳損益表 — gated "analytics" inside the router
   apiV1.route("/reviews", reviewsFeature.routes); // 顧客評價 (#286) — admin/owner only
   apiV1.route("/billing", billingFeature.routes);
   apiV1.route("/me", meFeature.routes);

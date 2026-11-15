@@ -1096,6 +1096,7 @@ describe("MenuService menu item metadata", () => {
     await service.updateMenuItem(1, {
       restaurantId: "restaurant-1",
       originalPrice: null,
+      costPrice: null,
       calories: null,
       ingredients: null,
       keywords: null,
@@ -1105,11 +1106,71 @@ describe("MenuService menu item metadata", () => {
     expect(updateBuilder.set).toHaveBeenCalledWith(
       expect.objectContaining({
         originalPriceCents: null,
+        costPriceCents: null,
         calories: null,
         ingredients: null,
         keywords: null,
         options: null,
       }),
+    );
+  });
+});
+
+describe("menu item cost price", () => {
+  it("writes cost in cents and keeps 0 distinct from unset", async () => {
+    const updateBuilder = {
+      set: vi.fn(() => updateBuilder),
+      where: vi.fn(() => updateBuilder),
+      returning: vi.fn(async () => [
+        {
+          id: 1,
+          restaurantId: "restaurant-1",
+          categoryId: 1,
+          name: "Laksa",
+          priceCents: 1800,
+          costPriceCents: 0,
+          createdAt: new Date("2026-08-12T00:00:00.000Z"),
+          updatedAt: new Date("2026-08-12T01:00:00.000Z"),
+        },
+      ]),
+    };
+    const service = createServiceWithDb({ update: vi.fn(() => updateBuilder) });
+    vi.spyOn(
+      service as unknown as { invalidateCache: () => Promise<void> },
+      "invalidateCache",
+    ).mockResolvedValue(undefined);
+    // Currency alignment needs a restaurant lookup; it has its own coverage.
+    vi.spyOn(
+      service as unknown as {
+        restaurantIdForMenuItem: () => Promise<string>;
+      },
+      "restaurantIdForMenuItem",
+    ).mockResolvedValue("restaurant-1");
+    const precision = vi
+      .spyOn(
+        service as unknown as { assertMoneyPrecision: () => Promise<void> },
+        "assertMoneyPrecision",
+      )
+      .mockResolvedValue(undefined);
+
+    await service.updateMenuItem(1, {
+      restaurantId: "restaurant-1",
+      costPrice: 0,
+    });
+    expect(updateBuilder.set).toHaveBeenCalledWith(
+      expect.objectContaining({ costPriceCents: 0 }),
+    );
+
+    await service.updateMenuItem(1, {
+      restaurantId: "restaurant-1",
+      costPrice: 4.5,
+    });
+    expect(updateBuilder.set).toHaveBeenLastCalledWith(
+      expect.objectContaining({ costPriceCents: 450 }),
+    );
+    expect(precision).toHaveBeenCalledWith(
+      "restaurant-1",
+      expect.arrayContaining([{ field: "costPrice", cents: 450 }]),
     );
   });
 });

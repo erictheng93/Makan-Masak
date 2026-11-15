@@ -4,6 +4,7 @@ export * from "./users";
 export * from "./customers";
 export * from "./restaurant-customers";
 export * from "./restaurant-alerts";
+export * from "./restaurant-expenses";
 export * from "./ephemeral-kv";
 export * from "./user-auth-identities";
 export * from "./policies";
