@@ -135,6 +135,49 @@ function settingsRecord(value: unknown): Record<string, unknown> {
 }
 
 /**
+ * The stored settings as a JSON object, read inside the UPDATE itself:
+ * NULL, malformed or non-object JSON reads as `{}`, and a legacy
+ * double-encoded value (a JSON string holding the object) is unwrapped.
+ * CASE arms run in order, so json_type never sees invalid JSON.
+ */
+const storedSettingsObjectSql = sql`CASE
+  WHEN ${restaurants.settings} IS NULL OR json_valid(${restaurants.settings}) = 0 THEN '{}'
+  WHEN json_type(${restaurants.settings}) = 'object' THEN ${restaurants.settings}
+  WHEN json_type(${restaurants.settings}) <> 'text' THEN '{}'
+  WHEN json_valid(${restaurants.settings} ->> '$') = 0 THEN '{}'
+  WHEN json_type(${restaurants.settings} ->> '$') = 'object' THEN ${restaurants.settings} ->> '$'
+  ELSE '{}'
+END`;
+
+/**
+ * `{ ...storedAtWriteTime, ...incoming }` evaluated by the UPDATE, one
+ * `json_set` path per incoming top-level key. Keys not in `incoming` —
+ * `pnlRates` above all, owned by PUT /pnl/:id/rates — come from the row as it
+ * is when the statement runs, so a save that landed after our read survives.
+ * Top-level replace only, like the spread: unlike json_patch, a null is
+ * stored as null and a nested object replaces the stored one wholesale.
+ */
+function mergeSettingsAtWriteTimeSql(incoming: Record<string, unknown>) {
+  const pairs = Object.entries(incoming).filter(([, v]) => v !== undefined);
+  const bad = pairs.find(([key]) => key.includes('"'));
+  if (bad) {
+    // A JSON path label cannot carry a double quote.
+    throw badRequest("Validation failed", "VALIDATION_ERROR", [
+      {
+        field: `settings.${bad[0]}`,
+        message: "Unsupported key",
+        code: "invalid_key",
+      },
+    ]);
+  }
+  if (pairs.length === 0) return sql`json(${storedSettingsObjectSql})`;
+  const paths = pairs.map(
+    ([key, value]) => sql`, ${`$."${key}"`}, json(${JSON.stringify(value)})`,
+  );
+  return sql`json_set(${storedSettingsObjectSql}${sql.join(paths)})`;
+}
+
+/**
  * The country a new restaurant trades in, plus the currency and timezone that
  * follow from it — the same derivation onboarding provisioning does. Without
  * it a restaurant created here would have a NULL country and silently skip
@@ -414,7 +457,8 @@ export class RestaurantService extends BaseService {
     data: UpdateRestaurantData,
   ): Promise<Restaurant> {
     try {
-      const updateData: UpdateRestaurantData = { ...data };
+      const { settings: _settings, ...updateData } = data;
+      let settingsSet: ReturnType<typeof sql> | undefined;
       let settingsWriteCurrency: string | undefined;
 
       if (data.settings !== undefined) {
@@ -424,21 +468,21 @@ export class RestaurantService extends BaseService {
         });
         const existingSettings = settingsRecord(existing?.settings);
         // pnlRates is a validated versions list owned by PUT /pnl/:id/rates;
-        // this generic path keeps whatever is stored instead.
+        // this generic path never writes it.
         const incomingSettings = { ...settingsRecord(data.settings) };
         delete incomingSettings.pnlRates;
 
-        updateData.settings = {
-          ...existingSettings,
-          ...incomingSettings,
-        };
+        // Validated against the settings as read; the write itself merges
+        // into the row as it is at write time.
+        const merged = { ...existingSettings, ...incomingSettings };
         if (existing !== undefined) {
           settingsWriteCurrency = requireRestaurantCurrency(
-            updateData.settings.currency,
+            merged.currency,
             id,
           );
         }
-        assertSettingsMoneyPrecision(incomingSettings, updateData.settings);
+        assertSettingsMoneyPrecision(incomingSettings, merged);
+        settingsSet = mergeSettingsAtWriteTimeSql(incomingSettings);
       }
 
       const updateWhere = settingsWriteCurrency
@@ -461,6 +505,7 @@ export class RestaurantService extends BaseService {
         .update(restaurants)
         .set({
           ...updateData,
+          ...(settingsSet ? { settings: settingsSet } : {}),
           updatedAt: new Date(),
         })
         .where(updateWhere)

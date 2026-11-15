@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { describe, expect, it } from "vitest";
+import { SchedulingService } from "@makanmasak/database";
 import { PnlService } from "./PnlService";
 
 // Real migrations, real SQL: the arithmetic lives in the queries.
@@ -313,7 +314,7 @@ function addSchedule(
   },
 ) {
   const worked = (s.status ?? "completed") === "completed";
-  sqlite
+  return sqlite
     .prepare(
       `INSERT INTO employee_schedules (restaurant_id, employee_id, shift_template_id, work_date, start_time, end_time,
          scheduled_hours, actual_hours, overtime_hours, status, clock_in_time_ms, clock_out_time_ms, created_by, created_at_ms, updated_at_ms,
@@ -331,7 +332,7 @@ function addSchedule(
       worked ? 1 : null,
       worked ? 2 : null,
       s.rate ?? null,
-    );
+    ).lastInsertRowid as number;
 }
 
 function addEmployee(
@@ -728,6 +729,59 @@ describe("PnlService labor rates", () => {
     expect((await svc.getDaily(SHOP, "2026-03-10")).labor.costCents).toBe(
       100000 + 20000 + 40000,
     );
+  });
+});
+
+describe("PnlService labor after schedule edits", () => {
+  it("prices each edited shift at its snapshot rule", async () => {
+    const sqlite = createDb();
+    seed(sqlite);
+    for (const [id, rate] of [
+      ["a", 30000],
+      ["b", 25000],
+      ["c", 15000],
+      ["d", 40000],
+      ["e", 20000],
+    ] as const) {
+      addEmployee(sqlite, id, rate);
+    }
+    const shift = (employeeId: string, rate: number | null) =>
+      addSchedule(sqlite, {
+        workDate: "2026-03-10",
+        templateId: null,
+        actualHours: 2,
+        employeeId,
+        rate,
+      });
+    const unsnapshotted = shift("a", null);
+    const snapshotted = shift("b", 10000);
+    const reassigned = shift("c", 15000);
+    const reopened = shift("e", 20000);
+    const scheduling = new SchedulingService(
+      {} as never,
+      {
+        JWT_SECRET: "test",
+      } as never,
+    );
+    (scheduling as unknown as { db: unknown }).db = drizzle(sqlite);
+    const edit = (id: number, data: Record<string, unknown>) =>
+      scheduling.updateSchedule(id, data, SHOP);
+
+    await edit(unsnapshotted, { scheduledHours: 7 }); // fills NT$300
+    sqlite
+      .prepare(
+        "UPDATE users SET hourly_rate_cents = 99900 WHERE id IN ('a', 'b')",
+      )
+      .run();
+    await edit(snapshotted, { scheduledHours: 7 }); // keeps NT$100
+    await edit(reassigned, { employeeId: "d" }); // re-resolves to NT$400
+    await edit(reopened, { status: "confirmed" }); // leaves the statement
+
+    expect((await service(sqlite).getDaily(SHOP, "2026-03-10")).labor).toEqual({
+      costCents: 2 * 30000 + 2 * 10000 + 2 * 40000,
+      shifts: 3,
+      shiftsMissingRate: 0,
+    });
   });
 });
 

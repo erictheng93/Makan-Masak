@@ -138,6 +138,8 @@ export const updateEmployeeScheduleSchema = z.lazy(() =>
       .optional(),
     notes: z.string().max(500).optional().nullable(),
     managerNotes: z.string().max(500).optional().nullable(),
+    // Owner correction of a completed shift's wage snapshot; null re-resolves.
+    hourlyRateCents: nonNegativeInteger.nullable().optional(),
     updatedBy: idString.optional(),
   }),
 );
