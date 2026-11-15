@@ -20,6 +20,14 @@
 
 ---
 
+## 店主：方案、試用期與用量 / Plans, Trial and Usage
+
+給店主的獨立說明頁（四種方案比較、180 天試用、用量上限、自助升級／降級、常見問題）。每個語言一份自足的 HTML，後台「訂閱與用量」頁的「方案與用量說明」連結會依後台語言開啟對應的一份：[繁體中文](./plans-and-usage.html) · [简体中文](./zh-CN/plans-and-usage.html) · [English](./en-US/plans-and-usage.html) · [日本語](./ja-JP/plans-and-usage.html) · [Tiếng Việt](./vi-VN/plans-and-usage.html) · [Bahasa Indonesia](./id-ID/plans-and-usage.html)。
+
+**維護**：繁體中文 `plans-and-usage.html` 是母版，其餘五份是翻譯副本（結構需與母版一致），`apps/onboarding-app/public/guide/` 放六份的上線複本，兩邊必須逐位元組相同；`pnpm check:handbook-locales` 會檢查。方案內容的依據是 `packages/database/src/schema/subscriptions.ts`（各方案功能）與 `packages/database/src/utils/plan-quotas.ts`（用量上限），這兩處變動時請同步更新此頁。上線網址：`/guide/plans-and-usage.html`（繁體中文）與 `/guide/<語系>/plans-and-usage.html`（其餘語言）。
+
+---
+
 ## 📚 可用語言 / Available Languages
 
 MakanMakan 提供以下語言的完整用戶手冊：
@@ -163,6 +171,7 @@ MakanMakan 提供以下語言的完整用戶手冊：
 ```
 user-manuals/
 ├── README.md                    (本文件 / This file)
+├── plans-and-usage.html         (店主：方案、試用期與用量，繁體中文母版；其他語言在各語系資料夾，含 zh-CN/)
 │
 ├── 🆕 SCHEDULING_MANUAL.md      (員工排班系統操作手冊 - 中英雙語 1,000+ 行)
 ├── 🆕 LEAVE_MANAGEMENT_MANUAL.md (請假管理系統操作手冊 - 中英雙語 1,800+ 行)

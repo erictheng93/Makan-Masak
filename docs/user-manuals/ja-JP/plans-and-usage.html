@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>プラン、無料トライアル、使用量 - MakanMasak</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --card: #FFFFFF;
+    --text: #1C1C1E;
+    --muted: #6E6E73;
+    --primary-strong: #B04F09; /* onboarding primary-700, text on white (5.3:1) */
+    --brand: #F38020; /* Cloudflare orange, onboarding primary-500: fills only */
+    --success: #34C759;
+    --warning: #FF9500;
+    --error: #FF3B30;
+    --soft-blue: #E8F1FF;
+    --soft-orange: #FFF4E5;
+    --soft-green: #EAF8EE;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+    font-size: 17px;
+    line-height: 1.75;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 { font-size: 30px; margin: 0 0 6px; }
+  header p { color: var(--muted); margin: 0; }
+  .langs { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin: 0 0 20px; font-size: 15px; }
+  .langs a { color: var(--primary-strong); font-weight: 600; }
+  .langs [aria-current] { color: var(--muted); font-weight: 600; }
+  .card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    scroll-margin-top: 16px;
+  }
+  h2 { font-size: 22px; margin: 0 0 12px; }
+  h3 { font-size: 18px; margin: 20px 0 8px; }
+  .step-no {
+    flex: none;
+    width: 28px; height: 28px;
+    border-radius: 999px;
+    background: var(--brand);
+    color: var(--text); /* #1C1C1E on #F38020 is 6.4:1; white is 2.65:1 */
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .toc a { display: inline-block; background: #FEF4EA; color: var(--primary-strong); border-radius: 999px; padding: 4px 14px; font-weight: 600; font-size: 15px; text-decoration: none; }
+  .tip, .warn, .ok {
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin: 14px 0;
+  }
+  .tip { background: var(--soft-blue); }
+  .warn { background: var(--soft-orange); }
+  .ok { background: var(--soft-green); }
+  .tip > strong:first-child, .warn > strong:first-child, .ok > strong:first-child { display: block; margin-bottom: 2px; }
+  .btn-label {
+    display: inline-block;
+    background: var(--brand);
+    color: var(--text); /* #1C1C1E on #F38020 is 6.4:1; white is 2.65:1 */
+    border-radius: 999px;
+    padding: 0 12px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .table-scroll { overflow-x: auto; margin: 8px 0 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  th, td { text-align: left; padding: 10px 8px; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 14px; }
+  tr + tr td { box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.06); }
+  td:first-child { font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .yes { color: #1E7B38; font-weight: 700; }
+  .no { color: var(--muted); }
+  .note { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+  ol, ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  details { background: var(--bg); border-radius: 16px; padding: 12px 16px; margin: 10px 0; }
+  summary { font-weight: 600; cursor: pointer; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; margin-top: 28px; }
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    main { padding: 24px 16px 48px; }
+    .card { padding: 20px 16px; }
+    table { font-size: 14px; }
+    th, td { padding: 8px 4px; }
+  }
+  @media print {
+    body { background: #FFFFFF; font-size: 13pt; }
+    .card { box-shadow: none; break-inside: avoid; border-radius: 0; padding: 12px 0; }
+    details { background: none; }
+    details > * { display: block; }
+    .langs, .toc { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>プラン、無料トライアル、使用量</h1>
+  <p>店主様向けガイド：現在のプランと使用量の確認方法、プランの変更方法</p>
+</header>
+
+<p class="langs" aria-label="言語">
+  <span aria-current="page">日本語</span>
+  <a href="../plans-and-usage.html" hreflang="zh-Hant-TW">繁體中文</a>
+  <a href="../zh-CN/plans-and-usage.html" hreflang="zh-Hans">简体中文</a>
+  <a href="../en-US/plans-and-usage.html" hreflang="en">English</a>
+  <a href="../vi-VN/plans-and-usage.html" hreflang="vi">Tiếng Việt</a>
+  <a href="../id-ID/plans-and-usage.html" hreflang="id">Bahasa Indonesia</a>
+</p>
+
+<section class="card" id="overview">
+  <h2>まずは要点</h2>
+  <ul>
+    <li>MakanMasak のプランは<strong>トライアル、スタンダード、プロフェッショナル、エンタープライズ</strong>の4種類です。新しい店舗はすべて<strong>トライアル</strong>から始まり、<strong>180 日間</strong>、すべての機能をお使いいただけます。</li>
+    <li><strong>トライアルが終わっても、停止されることはありません。</strong>プランの選択をお願いする案内が表示されるだけで、お店は通常どおり営業できます。</li>
+    <li>各プランには<strong>注文数・印刷数</strong>などの使用量の上限があります。80% に達するとお知らせし、上限に達すると、次の集計期間になるか、プランをアップグレードするまで、新規の注文とレシート印刷が一時停止されます。</li>
+    <li>プランは<strong>店主ご自身</strong>が管理画面の <span class="btn-label">プランと使用量</span> から変更できます。<strong>オンライン決済は不要</strong>で、サポートへの連絡も要りません。</li>
+    <li><strong>アップグレードはすぐに反映</strong>され、使用量は 0 から数え直されます。<strong>ダウングレードは今期の終了時に反映</strong>され、反映前なら取り消せます。</li>
+    <li>このページでは料金には触れていません。今後料金が発生する場合は、プラットフォームから別途お知らせします。</li>
+  </ul>
+  <ul class="toc" aria-label="このページの内容">
+    <li><a href="#plans">4つのプランの比較</a></li>
+    <li><a href="#trial">無料トライアル</a></li>
+    <li><a href="#usage">使用量の数え方</a></li>
+    <li><a href="#limit">使用量が上限に達したとき</a></li>
+    <li><a href="#upgrade">アップグレード</a></li>
+    <li><a href="#downgrade">ダウングレードと取り消し</a></li>
+    <li><a href="#lost-features">機能が使えなくなった場合の影響</a></li>
+    <li><a href="#special">特別なケース</a></li>
+    <li><a href="#emails">通知メール</a></li>
+    <li><a href="#who">変更できる人</a></li>
+    <li><a href="#faq">よくある質問</a></li>
+    <li><a href="#help">サポート</a></li>
+  </ul>
+</section>
+
+<section class="card" id="plans">
+  <h2>4つのプランの比較</h2>
+  <h3>含まれる機能</h3>
+  <div class="table-scroll" role="region" aria-label="各プランに含まれる機能" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">機能</th><th scope="col">トライアル</th><th scope="col">スタンダード</th><th scope="col">プロフェッショナル</th><th scope="col">エンタープライズ</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>メニュー管理</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>テーブル管理</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>オンライン注文</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>POS レジ</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>キッチンディスプレイ</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>レシート印刷</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>クーポン</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>予約</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>分析</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>AI分析</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>プラットフォームの統合</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>忠誠心</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>在庫管理</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+        <tr><td>スタッフ管理</td><td><span class="yes" aria-label="含まれる">✓</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="no" aria-label="含まれない">—</span></td><td><span class="yes" aria-label="含まれる">✓</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">上記は各プランの標準の内容です。プラットフォームの担当者が、店舗ごとに個別の機能を有効または無効にすることがあります。そのような個別設定は、店主様がプランを変更しても維持されます。一部の機能は国や地域によって提供されておらず、プランに含まれていても表示されません。</p>
+
+  <h3>使用量の上限</h3>
+  <div class="table-scroll" role="region" aria-label="各プランの使用量の上限" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">項目</th><th scope="col" class="num">トライアル</th><th scope="col" class="num">スタンダード</th><th scope="col" class="num">プロフェッショナル</th><th scope="col" class="num">エンタープライズ</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>期間あたりの注文数</td><td class="num">3,000（トライアル期間全体の合計）</td><td class="num">1,000</td><td class="num">10,000</td><td class="num">無制限</td></tr>
+        <tr><td>期間あたりの印刷数</td><td class="num">3,000（トライアル期間全体の合計）</td><td class="num"><span class="no">含まれません</span></td><td class="num">10,000</td><td class="num">無制限</td></tr>
+        <tr><td>期間あたりの AI リクエスト数</td><td class="num">10</td><td class="num"><span class="no">含まれません</span></td><td class="num"><span class="no">含まれません</span></td><td class="num">無制限</td></tr>
+        <tr><td>ストレージ</td><td class="num">1 GB</td><td class="num">5 GB</td><td class="num">50 GB</td><td class="num">無制限</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">「期間」の数え方は下の「使用量の数え方」をご覧ください。「含まれません」は、そのプランに対応する機能がないため、この枠もないことを表します（スタンダードにはレシート印刷がなく、スタンダードとプロフェッショナルには AI分析 がありません）。プラットフォームがその機能を店舗に別途有効にした場合は、プラットフォームの設定が優先されます。ストレージの数字は目安であり、上限に達しても操作が止められることはありません。「API リクエスト」も使用量の一覧に表示されますが、これも記録のみで、操作が止められることはありません。</p>
+</section>
+
+<section class="card" id="trial">
+  <h2>無料トライアル</h2>
+  <ul>
+    <li>新しい店舗はすべて<strong>トライアル</strong>から始まり、<strong>180 日間</strong>、すべての機能をお使いいただけます。</li>
+    <li><span class="btn-label">プランと使用量</span> のページでは、現在のプランの下に「試用期間はあと N 日です」と表示されます。</li>
+    <li>トライアルの注文数と印刷数の上限は<strong>トライアル期間全体の合計</strong>（それぞれ 3,000）で、毎月リセットされるものではありません。</li>
+  </ul>
+  <h3>トライアル終了後</h3>
+  <div class="ok">
+    <strong>何も停止されません</strong>
+    すべての機能をこれまでどおりお使いいただけますので、お店を休む必要はありません。管理画面にお知らせが表示されるだけです。画面の上部に「無料トライアルは終了しました。引き続きすべての機能をご利用いただけますが、MakanMasak を支援するためプランをご選択ください。」というバナーが出ます。また、ログインのたびに一度「無料トライアルは終了しました」というダイアログが表示されます。「続ける」を押して閉じるか、「プランを選ぶ」を押してそのままプランの選択に進めます。
+  </div>
+  <ul>
+    <li>トライアル終了後、プランを選ぶまでの間は、使用量の上限はトライアルの数字のままですが、<strong>暦月ごと</strong>の集計になります（毎月 0 に戻ります）。</li>
+    <li>トライアルから移る（スタンダード、プロフェッショナル、エンタープライズを選ぶ）場合は、<strong>すぐに反映</strong>されます。</li>
+    <li><strong>トライアルを離れると、トライアルには戻れません。</strong>トライアルは新しく開いた店舗のみが対象です。</li>
+  </ul>
+</section>
+
+<section class="card" id="usage">
+  <h2>使用量の数え方と確認できる場所</h2>
+  <p>システムは、上限のある次の3種類の使用量を数えます。</p>
+  <ul>
+    <li><strong>注文の作成</strong>：新しい注文を1件作成するごとに 1 と数えます。お客様がオンラインや QR コードから入れた注文、グループ注文、複数店舗にまたがる合算会計、スタッフが代理で作成した注文が含まれます。</li>
+    <li><strong>印刷ジョブ</strong>：レシートを1回印刷するごとに 1 と数えます。</li>
+    <li><strong>AI リクエスト</strong>：AI分析 の機能を使ったときに数えます。</li>
+  </ul>
+  <h3>「1期間」とはどのくらいか</h3>
+  <div class="table-scroll" role="region" aria-label="使用量の集計期間" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">店舗の状況</th><th scope="col">使用量の数え方</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>トライアル期間中</td><td>トライアル期間全体（180 日間）の合計で、リセットされません</td></tr>
+        <tr><td>トライアル終了後、プラン未選択</td><td>暦月ごとに集計し、月初に 0 に戻ります</td></tr>
+        <tr><td>スタンダード、プロフェッショナル、エンタープライズ</td><td>そのプランを選んだ時点から 30 日ごとが1期間です。期間が終わると自動的に次の期間に入り、0 から数え直します</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">暦月の区切りは協定世界時（UTC）が基準で、現地時間とは時差があります。たとえば日本では、毎月 1 日の午前 9 時に 0 に戻ります。</p>
+  <h3>確認できる場所</h3>
+  <ol>
+    <li>管理画面にログインし、左側のメニューから <span class="btn-label">プランと使用量</span> を選びます。</li>
+    <li>「今期の使用量」の欄に、項目ごとの使用済みの数と上限、そしてこの期間の開始日と終了日が表示されます。</li>
+    <li>進捗バーは使用量に応じて色が変わります。80% 未満は青、80% に達するとオレンジ、上限に達すると赤です。</li>
+  </ol>
+  <h3>上限が近づいたときのお知らせ</h3>
+  <p>使用量が上限の <strong>80%</strong> に達すると、管理画面の上部にオレンジ色のバナーが表示されます。たとえば「今期の注文数が上限の 85% に達しました（2,550/3,000）」のように表示され、横に <span class="btn-label">プランを見る</span> ボタンがあります。右側の ✕ を押すと閉じられます（今回のログイン中は再表示されません）。このお知らせは店主様にのみ表示されます。</p>
+</section>
+
+<section class="card" id="limit">
+  <h2>使用量が上限に達したとき</h2>
+  <p>使用量が上限に達すると、<strong>次の集計期間が始まる</strong>か<strong>プランをアップグレードする</strong>までの間、次のようになります。</p>
+  <ul>
+    <li><strong>新規の注文は受け付けられません</strong>：お客様はオンラインや QR コードから注文できず、スタッフも代理での新規注文やグループ注文の開始ができません。<strong>すでに成立している注文には影響しません</strong>。調理、提供、会計はこれまでどおり行えます。</li>
+    <li><strong>レシートを印刷できません</strong>。</li>
+    <li>そのほかの機能には影響しません。</li>
+  </ul>
+  <p>このとき、管理画面の上部に閉じることのできない赤いバナーが表示されます：「注文数の上限に達しました。現在お客様は注文できません」または「印刷数の上限に達しました。現在レシートや伝票を印刷できません」。システムから通知メールも届きます（「通知メール」をご覧ください）。</p>
+  <div class="tip">
+    <strong>最も早く復旧する方法：プランのアップグレード</strong>
+    アップグレードはすぐに反映され、使用量も 0 から数え直されます。上限に達したばかりのお店でも、アップグレード後すぐにまた注文を受けられます。手順は次の節をご覧ください。
+  </div>
+  <p>お客様の画面には「現在は注文できません」としか表示されません。お客様から指摘されて気づくことがないよう、使用量が上限に近づいた段階（オレンジ色のバナーが出た時点）で対応しておくことをおすすめします。</p>
+</section>
+
+<section class="card" id="upgrade">
+  <h2>プランのアップグレード（すぐに反映）</h2>
+  <p>アップグレードとは、下位のプランから上位のプランへの変更のことです：<strong>スタンダード → プロフェッショナル → エンタープライズ</strong>。トライアルから<strong>どの</strong>有料プランに移る場合も、すぐに反映されます。トライアルより機能が少ないプラン（たとえばスタンダード）に移る場合は、カードのボタンが <span class="btn-label">今すぐ変更</span>、確認ダイアログのボタンが <span class="btn-label">変更を確定</span> になります。</p>
+  <ol>
+    <li>管理画面にログインし、左側のメニューから <span class="btn-label">プランと使用量</span> を選びます。（使用量のお知らせバナーの <span class="btn-label">プランを見る</span> や、トライアル終了のバナーの <span class="btn-label">プランを選ぶ</span> からも、次の手順の画面に直接移動できます。）</li>
+    <li>下へ進み、「<strong>プランを選ぶ</strong>」の欄を探します。4種類のプランがそれぞれカードになっており、期間あたりの上限と含まれる機能が書かれています。現在のプランには「現在のプラン」と表示されています。</li>
+    <li>希望のプランのカードで <span class="btn-label">今すぐアップグレード</span> を押します。</li>
+    <li>確認ダイアログ「○○に変更」が表示され、「すぐに反映されます。」と「今期の利用量は 0 から再計算されます。」の文言、そして「利用できるようになる機能」が一覧で示されます。内容を確認して <span class="btn-label">アップグレードを確定</span> を押します。</li>
+    <li>「プランを○○に変更しました」と表示されれば完了です。上部のオレンジ色や赤色のバナーは、まもなく消えます。</li>
+  </ol>
+  <div class="ok">
+    <strong>アップグレード後</strong>
+    新しい機能がすぐに使えるようになります。使用量は 0 に戻り、新しい 30 日間の集計期間がこの時点から始まります。以前にダウングレードを予約していた場合は、それも取り消されます。支払いも、どなたかへの連絡も必要ありません。
+  </div>
+</section>
+
+<section class="card" id="downgrade">
+  <h2>プランのダウングレードと取り消し</h2>
+  <p>ダウングレードとは、上位のプランから下位のプランへの変更のことで、たとえばプロフェッショナル → スタンダードです。ダウングレードは<strong>すぐには反映されず</strong>、<strong>今期の終了</strong>を待って切り替わります。それまでは、現在のプランのすべての機能を引き続きお使いいただけます。</p>
+  <h3>ダウングレードを予約する</h3>
+  <ol>
+    <li><span class="btn-label">プランと使用量</span> の「プランを選ぶ」の欄で、変更したい下位のプランを探します。</li>
+    <li>カードの <span class="btn-label">ダウングレードを予約（○月○日 に反映）</span> を押します（日付は今期の終了日です）。</li>
+    <li>確認ダイアログには「今期の終了時（日付）に反映されます。それまでは現在のプランの機能を利用できます。」と「新しいプランの利用量は、反映日から改めて計算されます。」が表示され、「利用できなくなる機能」と「変更後の影響」が一覧で示されます。たとえば「今後の予約 3 件は管理画面で確認できなくなります」のように表示されますので、1つずつご確認ください。</li>
+    <li>変更してよければ <span class="btn-label">ダウングレードの予約を確定</span> を押します。「○○へのダウングレードを予約しました」と表示されます。</li>
+  </ol>
+  <p>予約すると、ページの上部にオレンジ色の案内「○月○日 に ○○ へダウングレードする予約があります」が表示され、プランのカードにも「○月○日 に反映予定」と表示されます。別のダウングレードをさらに予約した場合は、前の予約が置き換えられます。</p>
+  <h3>反映のタイミング</h3>
+  <p>今期の終了時に、システムが自動的に新しいプランへ切り替え、新しい期間を開始して使用量を 0 から数え始めます。システムは予約された変更を1日に1回処理するため、実際の切り替えは画面上の日付より数時間遅れることがあります。それまでは元のプランのままです。</p>
+  <h3>予約したダウングレードを取り消す</h3>
+  <ol>
+    <li><span class="btn-label">プランと使用量</span> ページの上部にあるオレンジ色の案内で、<span class="btn-label">ダウングレードを取り消す</span> を押します（予約中のプランのカードのボタンも、同じ表示に変わります）。</li>
+    <li>「予約したダウングレードを取り消しますか？」のダイアログで確認します。現在のプランのまま利用を続けられます。「ダウングレードを取り消しました」と表示されれば完了です。</li>
+  </ol>
+  <p>反映された後は取り消せません。元のプランに戻したいときは、「アップグレード」の手順でもう一度アップグレードしてください。</p>
+</section>
+
+<section class="card" id="lost-features">
+  <h2>機能が使えなくなった場合はどうなるか</h2>
+  <p>ダウングレード（またはトライアルから機能の少ないプランへの変更）をすると、新しいプランに含まれない機能は次のように扱われます。</p>
+  <ul>
+    <li><strong>管理画面の対応する画面が閉じられます。</strong>たとえばスタンダードに下げると、POS レジ、キッチンディスプレイ、クーポン、予約、分析の画面には入れなくなります。</li>
+    <li><strong>データは削除されません。</strong>予約、サービス予約、シフト表、食材、クーポンなどの記録はそのまま残り、一時的に見られなくなるだけです。あとでそれらの機能があるプランに戻せば、すべて元に戻ります。</li>
+    <li><strong>お客様側：</strong>
+      <ul>
+        <li>お客様は、オンライン予約やサービス予約の<strong>新規追加ができなくなり</strong>、順番待ちへの登録もできません。順番待ちのリアルタイムの待ち状況も提供されなくなります。</li>
+        <li>お客様は、すでにある予約、サービス予約、順番待ちを<strong>引き続き確認し、取り消すことができます</strong>。</li>
+        <li>店舗独自の<strong>クーポン</strong>は使えなくなります。プラットフォーム自体のキャンペーンには影響しません。</li>
+      </ul>
+    </li>
+    <li><strong>デリバリー連携：</strong>デリバリープラットフォームからの注文は引き続き届き、管理画面から連携を<strong>切断</strong>することも引き続き可能です。ただし、連携のそのほかの設定と一覧の画面は閉じられます。ダウングレードの確認ダイアログに「連携中のデリバリープラットフォーム 1 件が切断されます」と表示されることがありますが、これは管理画面から管理できなくなるという意味で、プラットフォーム側で自動的に接続が切れるわけではありません。</li>
+    <li><strong>スタッフ管理：</strong>予定済みのシフトや承認待ちの休暇申請を確認・処理できなくなります。<strong>在庫管理：</strong>食材の在庫の追跡が停止します。</li>
+  </ul>
+  <p class="note">ダウングレードの前に、確認ダイアログが店舗の実際のデータに基づいて影響を受ける件数をお知らせします。「ダウングレードの予約を確定」を押す前によくご確認ください。</p>
+</section>
+
+<section class="card" id="special">
+  <h2>特別なケース</h2>
+  <details open>
+    <summary>終了していないレジ締め前のシフトがある</summary>
+    <p>POS のあるプランから POS のないプランへ変更する場合（プロフェッショナルまたはエンタープライズ → スタンダード、あるいはトライアル → スタンダード）は、先にレジのシフトを終了する必要があります。</p>
+    <ul>
+      <li><strong>すぐに反映される場合（トライアルからスタンダード、ボタンは「今すぐ変更」）：</strong>シフトが終了していないと、システムは変更を受け付けず、「未終了のレジシフトがあります。ダウングレード前に POS で終了してください。」と表示します。確認ダイアログの <span class="btn-label">POS でシフトを終了する</span> から、そのまま POS へ移動できます。</li>
+      <li><strong>予約したダウングレード：</strong>反映日にシフトがまだ開いている場合、ダウングレードは<strong>シフトが終了してから反映</strong>されます。ページには「○○へのダウングレードは予約済みですが、未終了のレジ締め前シフトがあるため、シフトを終了するまで反映されません。」と表示されます。できるだけ早くシフトを終了してください。</li>
+    </ul>
+  </details>
+  <details>
+    <summary>プランが「選択できません」と表示される：そのプランはお住まいの地域で提供されていません</summary>
+    <p>一部のプランは国や地域によってまだ提供されておらず、カードに「このプランはお住まいの地域ではまだ提供されていません。」と表示され、ボタンも押せません。ほかのプランをお選びください。</p>
+  </details>
+  <details>
+    <summary>トライアルが「選択できません」と表示される</summary>
+    <p>トライアルを離れると戻ることはできません。カードには「トライアルは新規店舗のみで、再度利用することはできません。」と表示されます。</p>
+  </details>
+  <details>
+    <summary>「プランがたった今ほかの人によって変更されました」</summary>
+    <p>別の店主アカウントやプラットフォームの担当者が、操作と同じタイミングでプランを変更した場合、「プランがたった今ほかの人によって変更されました。画面を更新しましたので、内容を確認してからもう一度お試しください。」と表示されます。操作は実行<strong>されていません</strong>。画面は最新の状態に更新されていますので、内容を確認してもう一度操作してください。</p>
+  </details>
+  <details>
+    <summary>「すでにこのプランをご利用中です。」または「予約中のダウングレードはもうありません。画面を更新しました。」</summary>
+    <p>画面の情報が古くなっていることを示しています（たとえば別のタブですでに操作した場合など）。システムが自動的に画面を更新しますので、何もする必要はありません。</p>
+  </details>
+  <details>
+    <summary>「サブスクリプションが無効のため、プランを変更できません。サポートにお問い合わせください。」</summary>
+    <p>プラットフォーム側でサブスクリプションが無効にされている間は、ご自身でプランを変更できません。プラットフォームの担当者にご連絡ください。</p>
+  </details>
+</section>
+
+<section class="card" id="emails">
+  <h2>届く通知メール</h2>
+  <p>次のような場合、システムは店舗に登録された連絡先のメールアドレスにメールを送ります（普段確認されるメールアドレスであることをご確認ください）。</p>
+  <ul>
+    <li><strong>プランの変更</strong>：アップグレードがすぐに反映されたとき、または予約したダウングレードが期日を迎えて反映されたとき。</li>
+    <li><strong>ダウングレードの予約</strong>：メールには反映される日付と、管理画面で取り消せることが書かれています。</li>
+    <li><strong>ダウングレードの取り消し</strong>。</li>
+    <li><strong>使用量の上限到達</strong>：同じ項目の使用量については、同じ期間に1回だけ送信されます。</li>
+  </ul>
+  <p class="note">現在、これらの通知メールの本文は英語です。</p>
+</section>
+
+<section class="card" id="who">
+  <h2>プランを変更できる人</h2>
+  <p><strong>店主</strong>（とプラットフォームの担当者）だけが、<span class="btn-label">プランと使用量</span> を表示してプランを変更できます。シェフ、サービススタッフ、レジ担当などほかのスタッフのアカウントにはこのページが表示されず、変更もできません。使用量のお知らせバナーも店主様にのみ表示されます。</p>
+</section>
+
+<section class="card" id="faq">
+  <h2>よくある質問</h2>
+  <details>
+    <summary>トライアルが終了しました。お店は停止されますか？</summary>
+    <p>いいえ。トライアル終了後も、すべての機能を引き続きお使いいただけます。管理画面でプランの選択をお願いする案内が表示されるだけです。ただし、使用量の上限は毎月リセットされる形に変わります（数字はトライアルのままです）。</p>
+  </details>
+  <details>
+    <summary>アップグレードすると、これまでの使用量は 0 に戻りますか？</summary>
+    <p>はい。アップグレードはすぐに反映され、新しい 30 日間の集計期間がアップグレードした時点から始まり、使用量は 0 から数え直されます。そのため、使用量が上限に達して注文を受けられなかったお店でも、アップグレード後すぐにまた注文を受けられます。</p>
+  </details>
+  <details>
+    <summary>ダウングレードすると、データは消えますか？</summary>
+    <p>いいえ。記録はすべて残り、関連する管理画面が一時的に閉じられるだけです。あとでその機能のあるプランにアップグレードすれば、データは元に戻ります。</p>
+  </details>
+  <details>
+    <summary>お客様から注文できないと言われました。なぜですか？</summary>
+    <p>最もよくある原因は、今期の注文数が上限に達していることです。管理画面の <span class="btn-label">プランと使用量</span> で「今期の使用量」を確認してください。注文数が上限に達している場合は、上部に赤いバナーが表示されます。プランをアップグレードすればすぐに復旧します。アップグレードしない場合は、次の集計期間が始まるまでお待ちください。</p>
+  </details>
+  <details>
+    <summary>トライアルに戻せますか？</summary>
+    <p>いいえ。トライアルを離れると、トライアルには戻れません。トライアルは新しく開いた店舗のみが対象です。</p>
+  </details>
+  <details>
+    <summary>ダウングレードをすぐに反映できますか？</summary>
+    <p>いいえ。ダウングレードは必ず今期の終了時に反映され、反映前なら取り消せます。</p>
+  </details>
+  <details>
+    <summary>プランの変更には料金がかかりますか？</summary>
+    <p>現在、管理画面でのプラン変更にオンライン決済は不要です。今後料金が発生する場合は、プラットフォームから別途お知らせします。</p>
+  </details>
+  <details>
+    <summary>使用量が上限に達しましたが、アップグレードしたくない場合は？</summary>
+    <p>次の集計期間が始まるまでお待ちいただけます（トライアル終了後は翌月 1 日、有料プランは現在の期間の終了日で、日付は「今期の使用量」の右上に表示されます）。それまでの間、新規の注文とレシート印刷は一時停止されます。</p>
+  </details>
+</section>
+
+<section class="card" id="help">
+  <h2>サポート</h2>
+  <ul>
+    <li><span class="btn-label">プランと使用量</span> の「プランを選ぶ」の欄の右上に「プランと利用量のガイド」というリンクがあり、このページが開きます。</li>
+    <li>プランを変更できない場合、サブスクリプションが無効になっている場合、または自分の店舗にどのプランが適しているか確認したい場合は、プラットフォームの担当者（店舗アカウントを開設した窓口）にご連絡ください。</li>
+  </ul>
+</section>
+
+<footer>MakanMasak · プラン、無料トライアル、使用量 · 2026年11月時点のシステムの動作に基づく</footer>
+
+</main>
+</body>
+</html>

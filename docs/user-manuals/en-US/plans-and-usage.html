@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plans, Trial and Usage - MakanMasak</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --card: #FFFFFF;
+    --text: #1C1C1E;
+    --muted: #6E6E73;
+    --primary-strong: #B04F09; /* onboarding primary-700, text on white (5.3:1) */
+    --brand: #F38020; /* Cloudflare orange, onboarding primary-500: fills only */
+    --success: #34C759;
+    --warning: #FF9500;
+    --error: #FF3B30;
+    --soft-blue: #E8F1FF;
+    --soft-orange: #FFF4E5;
+    --soft-green: #EAF8EE;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    font-size: 17px;
+    line-height: 1.75;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 { font-size: 30px; margin: 0 0 6px; }
+  header p { color: var(--muted); margin: 0; }
+  .langs { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin: 0 0 20px; font-size: 15px; }
+  .langs a { color: var(--primary-strong); font-weight: 600; }
+  .langs [aria-current] { color: var(--muted); font-weight: 600; }
+  .card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    scroll-margin-top: 16px;
+  }
+  h2 { font-size: 22px; margin: 0 0 12px; }
+  h3 { font-size: 18px; margin: 20px 0 8px; }
+  .step-no {
+    flex: none;
+    width: 28px; height: 28px;
+    border-radius: 999px;
+    background: var(--brand);
+    color: var(--text); /* #1C1C1E on #F38020 is 6.4:1; white is 2.65:1 */
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .toc a { display: inline-block; background: #FEF4EA; color: var(--primary-strong); border-radius: 999px; padding: 4px 14px; font-weight: 600; font-size: 15px; text-decoration: none; }
+  .tip, .warn, .ok {
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin: 14px 0;
+  }
+  .tip { background: var(--soft-blue); }
+  .warn { background: var(--soft-orange); }
+  .ok { background: var(--soft-green); }
+  .tip > strong:first-child, .warn > strong:first-child, .ok > strong:first-child { display: block; margin-bottom: 2px; }
+  .btn-label {
+    display: inline-block;
+    background: var(--brand);
+    color: var(--text); /* #1C1C1E on #F38020 is 6.4:1; white is 2.65:1 */
+    border-radius: 999px;
+    padding: 0 12px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .table-scroll { overflow-x: auto; margin: 8px 0 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  th, td { text-align: left; padding: 10px 8px; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 14px; }
+  tr + tr td { box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.06); }
+  td:first-child { font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .yes { color: #1E7B38; font-weight: 700; }
+  .no { color: var(--muted); }
+  .note { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+  ol, ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  details { background: var(--bg); border-radius: 16px; padding: 12px 16px; margin: 10px 0; }
+  summary { font-weight: 600; cursor: pointer; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; margin-top: 28px; }
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    main { padding: 24px 16px 48px; }
+    .card { padding: 20px 16px; }
+    table { font-size: 14px; }
+    th, td { padding: 8px 4px; }
+  }
+  @media print {
+    body { background: #FFFFFF; font-size: 13pt; }
+    .card { box-shadow: none; break-inside: avoid; border-radius: 0; padding: 12px 0; }
+    details { background: none; }
+    details > * { display: block; }
+    .langs, .toc { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Plans, Trial and Usage</h1>
+  <p>A guide for shop owners: how to check your current plan and usage, and how to change plans yourself</p>
+</header>
+
+<p class="langs" aria-label="Language">
+  <span aria-current="page">English</span>
+  <a href="../plans-and-usage.html" hreflang="zh-Hant">繁體中文</a>
+  <a href="../zh-CN/plans-and-usage.html" hreflang="zh-Hans">简体中文</a>
+  <a href="../ja-JP/plans-and-usage.html" hreflang="ja">日本語</a>
+  <a href="../vi-VN/plans-and-usage.html" hreflang="vi">Tiếng Việt</a>
+  <a href="../id-ID/plans-and-usage.html" hreflang="id">Bahasa Indonesia</a>
+</p>
+
+<section class="card" id="overview">
+  <h2>The key points</h2>
+  <ul>
+    <li>MakanMasak has four plans: <strong>Trial, Standard, Professional and Enterprise</strong>. Every new shop starts on the <strong>Trial</strong> plan for <strong>180 days</strong>, with all features available.</li>
+    <li><strong>Your shop is not shut off when the trial ends.</strong> The system simply asks you to choose a plan, and the shop keeps operating as usual.</li>
+    <li>Each plan has usage limits, such as <strong>orders and print jobs</strong>. You get a reminder at 80%. Once a limit is reached, new orders and receipt printing pause until the next period begins or you upgrade.</li>
+    <li><strong>You</strong>, the shop owner, change plans yourself in the dashboard under <span class="btn-label">Plan &amp; Usage</span>. <strong>No online payment is needed</strong>, and you do not have to contact support.</li>
+    <li><strong>Upgrades take effect immediately</strong> and usage starts again from 0. <strong>Downgrades take effect at the end of the current period</strong>, and you can cancel one before then.</li>
+    <li>This page does not cover any fees. If charges are introduced later, the platform will announce them separately.</li>
+  </ul>
+  <ul class="toc" aria-label="On this page">
+    <li><a href="#plans">Plan comparison</a></li>
+    <li><a href="#trial">Trial</a></li>
+    <li><a href="#usage">How usage is counted</a></li>
+    <li><a href="#limit">When a limit is reached</a></li>
+    <li><a href="#upgrade">Upgrading</a></li>
+    <li><a href="#downgrade">Downgrading and cancelling</a></li>
+    <li><a href="#lost-features">What happens when you lose a feature</a></li>
+    <li><a href="#special">Special cases</a></li>
+    <li><a href="#emails">Notification emails</a></li>
+    <li><a href="#who">Who can make changes</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="#help">Getting help</a></li>
+  </ul>
+</section>
+
+<section class="card" id="plans">
+  <h2>Plan comparison</h2>
+  <h3>Included features</h3>
+  <div class="table-scroll" role="region" aria-label="Features included in each plan" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">Feature</th><th scope="col">Trial</th><th scope="col">Standard</th><th scope="col">Professional</th><th scope="col">Enterprise</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Menu Management</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>Table Management</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>Online Ordering</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>POS</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>Kitchen Display</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>Receipt Printing</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>Coupons</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>Reservations</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>Analytics</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>AI Analytics</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>Platform Integration</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>Loyalty</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>Inventory</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+        <tr><td>Staff Management</td><td><span class="yes" aria-label="Included">✓</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="no" aria-label="Not included">—</span></td><td><span class="yes" aria-label="Included">✓</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">The table shows what each plan includes as standard. Platform staff can also turn individual features on or off for a single shop, and those individual settings are kept when you change plans yourself. A few features are not offered in some countries or regions and will not appear there, even if your plan includes them.</p>
+
+  <h3>Usage limits</h3>
+  <div class="table-scroll" role="region" aria-label="Usage limits for each plan" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">Item</th><th scope="col" class="num">Trial</th><th scope="col" class="num">Standard</th><th scope="col" class="num">Professional</th><th scope="col" class="num">Enterprise</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Orders per period</td><td class="num">3,000 (total for the whole trial)</td><td class="num">1,000</td><td class="num">10,000</td><td class="num">Unlimited</td></tr>
+        <tr><td>Print jobs per period</td><td class="num">3,000 (total for the whole trial)</td><td class="num"><span class="no">Not included</span></td><td class="num">10,000</td><td class="num">Unlimited</td></tr>
+        <tr><td>AI requests per period</td><td class="num">10</td><td class="num"><span class="no">Not included</span></td><td class="num"><span class="no">Not included</span></td><td class="num">Unlimited</td></tr>
+        <tr><td>Storage</td><td class="num">1 GB</td><td class="num">5 GB</td><td class="num">50 GB</td><td class="num">Unlimited</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">How a "period" is counted is explained below under "How usage is counted". "Not included" means the plan does not have the matching feature (Standard has no Receipt Printing; Standard and Professional have no AI Analytics), so there is no allowance for it either; if the platform has enabled that feature for your shop separately, the platform's setting applies. Storage figures are a guide only, and reaching the limit does not block you. "API requests" also appear in the usage list; they are recorded for information only and never block any action.</p>
+</section>
+
+<section class="card" id="trial">
+  <h2>Trial</h2>
+  <ul>
+    <li>Every new shop starts on the <strong>Trial</strong> plan for <strong>180 days</strong>, with all features available.</li>
+    <li>On the <span class="btn-label">Plan &amp; Usage</span> page, below your current plan, you will see "N days left in your trial".</li>
+    <li>The Trial limits for orders and print jobs are a <strong>total for the whole trial</strong> (3,000 each), not a monthly allowance that resets.</li>
+  </ul>
+  <h3>After the trial ends</h3>
+  <div class="ok">
+    <strong>Nothing gets switched off</strong>
+    All features keep working and your shop does not need to close. The dashboard only shows reminders: a banner at the top reads "Your free trial has ended. Everything keeps working, but please choose a plan to support MakanMasak.", and each time you sign in a "Your free trial has ended" window appears once. You can close it with "Continue", or press "Choose a plan" to go and pick one right away.
+  </div>
+  <ul>
+    <li>After the trial ends and until you choose a plan, the usage limits are still the Trial figures, but they are counted <strong>per calendar month</strong> (resetting to zero each month).</li>
+    <li>Leaving the Trial (by choosing Standard, Professional or Enterprise) <strong>takes effect immediately</strong>.</li>
+    <li><strong>Once you leave the Trial, you cannot go back to it.</strong> The Trial is only for newly opened shops.</li>
+  </ul>
+</section>
+
+<section class="card" id="usage">
+  <h2>How usage is counted and where to see it</h2>
+  <p>The system tracks three kinds of usage that have limits:</p>
+  <ul>
+    <li><strong>Orders created</strong>: each new order counts as 1. This includes orders customers place online or by scanning a QR code, group orders, combined checkouts across several shops, and orders staff create on a customer's behalf.</li>
+    <li><strong>Print jobs</strong>: each receipt printed counts as 1.</li>
+    <li><strong>AI requests</strong>: counted when you use the AI Analytics feature.</li>
+  </ul>
+  <h3>How long is a "period"?</h3>
+  <div class="table-scroll" role="region" aria-label="How usage periods are counted" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">Your situation</th><th scope="col">How usage is counted</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>During the trial</td><td>One total for the whole trial (180 days), with no reset</td></tr>
+        <tr><td>Trial ended, no plan chosen yet</td><td>Each calendar month, resetting at the start of the month</td></tr>
+        <tr><td>Standard, Professional or Enterprise</td><td>Every 30 days from the moment you choose the plan; when a period ends, the next one begins automatically and starts from 0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">The start and end of a calendar month follow Coordinated Universal Time (UTC), which differs from local time. For example, in Taiwan (UTC+8) usage resets at 8:00 a.m. on the 1st of each month.</p>
+  <h3>Where to look</h3>
+  <ol>
+    <li>Sign in to the dashboard and choose <span class="btn-label">Plan &amp; Usage</span> from the menu on the left.</li>
+    <li>The "Usage this cycle" section lists how much of each item you have used, its limit, and the start and end dates of the current period.</li>
+    <li>The progress bar changes color with usage: blue below 80%, orange at 80%, and red when the limit is reached.</li>
+  </ol>
+  <h3>Reminder when you are close to the limit</h3>
+  <p>When you reach <strong>80%</strong> of a limit, an orange banner appears at the top of the dashboard, for example "85% of this period's orders used (2,550/3,000)", with a <span class="btn-label">View plans</span> button next to it. You can dismiss it with the ✕ on the right (it stays hidden for the rest of this sign-in). Only the shop owner sees this reminder.</p>
+</section>
+
+<section class="card" id="limit">
+  <h2>What happens when a limit is reached</h2>
+  <p>Once usage reaches a limit, and until <strong>the next period begins</strong> or <strong>you upgrade</strong>:</p>
+  <ul>
+    <li><strong>New orders are rejected</strong>: customers cannot order online or by scanning a QR code, and staff cannot create new orders for customers or start group orders. <strong>Orders already placed are not affected</strong>; they are prepared, served and paid as usual.</li>
+    <li><strong>Receipts cannot be printed.</strong></li>
+    <li>Other features are not affected.</li>
+  </ul>
+  <p>A red banner that cannot be dismissed then appears at the top of the dashboard: "Order limit reached: customers cannot place orders right now" or "Print limit reached: receipts and tickets cannot be printed right now". The system also sends you a notification email (see "Notification emails").</p>
+  <div class="tip">
+    <strong>The fastest way to recover: upgrade your plan</strong>
+    An upgrade takes effect immediately and usage starts again from 0, so a shop that has just hit its limit can accept orders again right after upgrading. The steps are in the next section.
+  </div>
+  <p>Customers only see that ordering is unavailable right now. We recommend acting as soon as you see the orange banner, rather than finding out when a customer tells you.</p>
+</section>
+
+<section class="card" id="upgrade">
+  <h2>Upgrading (takes effect immediately)</h2>
+  <p>An upgrade means moving from a lower plan to a higher one: <strong>Standard → Professional → Enterprise</strong>. Moving from the Trial to <strong>any</strong> other plan also takes effect immediately. When you move to a plan with fewer features than the Trial (for example Standard), the button on the card reads <span class="btn-label">Switch now</span> and the button in the confirmation window is <span class="btn-label">Confirm change</span>.</p>
+  <ol>
+    <li>Sign in to the dashboard and choose <span class="btn-label">Plan &amp; Usage</span> from the menu on the left. (The <span class="btn-label">View plans</span> button on the usage banner and the <span class="btn-label">Choose a plan</span> button on the trial-ended banner both take you straight to the next step.)</li>
+    <li>Scroll down to the "<strong>Choose a plan</strong>" section. Each of the four plans has its own card showing its limits per period and the features it includes; your current plan is marked "Current plan".</li>
+    <li>On the card of the plan you want, press <span class="btn-label">Upgrade now</span>.</li>
+    <li>A confirmation window titled "Switch to Professional" appears, saying "Takes effect immediately." and "This period's usage will start again from 0.", and listing "What you gain". When everything looks right, press <span class="btn-label">Confirm upgrade</span>.</li>
+    <li>When you see "Plan changed to Professional", you are done. The orange or red banner at the top will disappear shortly.</li>
+  </ol>
+  <div class="ok">
+    <strong>After upgrading</strong>
+    New features appear right away; usage resets to zero and a new 30-day period starts from that moment; and if you had scheduled a downgrade, it is cancelled as well. You do not need to pay or contact anyone at any point.
+  </div>
+</section>
+
+<section class="card" id="downgrade">
+  <h2>Downgrading and cancelling a downgrade</h2>
+  <p>A downgrade means moving from a higher plan to a lower one, for example Professional → Standard. A downgrade <strong>does not take effect right away</strong>; the change happens <strong>at the end of the current period</strong>, and until then you can keep using everything in your current plan.</p>
+  <h3>Scheduling a downgrade</h3>
+  <ol>
+    <li>In the "Choose a plan" section of <span class="btn-label">Plan &amp; Usage</span>, find the lower plan you want to move to.</li>
+    <li>Press <span class="btn-label">Schedule downgrade, effective Dec 1</span> on its card (the date shown is the end of the current period).</li>
+    <li>The confirmation window says "Takes effect at the end of this period (date); until then you keep your current plan's features." and "Usage on the new plan is counted afresh from the effective date.", and lists "What you lose" and "What changes", for example "3 future reservation(s) will no longer be viewable in the dashboard". Please read through each item.</li>
+    <li>If you want to go ahead, press <span class="btn-label">Confirm scheduled downgrade</span>, and you will see "Downgrade to Standard scheduled".</li>
+  </ol>
+  <p>Once scheduled, an orange notice appears at the top of the page: "Downgrade to Standard scheduled for Dec 1", and the plan card is marked "Scheduled for Dec 1". If you schedule another downgrade, it replaces the earlier one.</p>
+  <h3>When it takes effect</h3>
+  <p>When the current period ends, the system switches you to the new plan automatically, starts a new period and counts usage from 0. The system processes scheduled changes once a day, so the actual switch may happen a few hours after the date shown on screen; until then you are still on your original plan.</p>
+  <h3>Cancelling a scheduled downgrade</h3>
+  <ol>
+    <li>On the orange notice at the top of the <span class="btn-label">Plan &amp; Usage</span> page, press <span class="btn-label">Cancel downgrade</span> (the card of the plan you are moving to shows the same button).</li>
+    <li>Confirm in the "Cancel the scheduled downgrade?" window; you will stay on your current plan. When you see "Downgrade cancelled", you are done.</li>
+  </ol>
+  <p>Once a downgrade has taken effect it can no longer be cancelled; to go back, follow the "Upgrading" steps again.</p>
+</section>
+
+<section class="card" id="lost-features">
+  <h2>What happens when you lose a feature</h2>
+  <p>After a downgrade (or after leaving the Trial for a plan with fewer features), features that are not in your plan are handled as follows:</p>
+  <ul>
+    <li><strong>The related dashboard screens are closed.</strong> For example, after moving to Standard you can no longer open the POS, Kitchen Display, Coupons, Reservations or Analytics screens.</li>
+    <li><strong>Your data is not deleted.</strong> Records such as reservations, service bookings, shift schedules, ingredients and coupons are all still there; they are just hidden for now. If you later upgrade to a plan that includes those features, everything comes back.</li>
+    <li><strong>For customers:</strong>
+      <ul>
+        <li>Customers <strong>can no longer create</strong> online reservations or service bookings, or join the waitlist; live waitlist status is no longer provided either.</li>
+        <li>Customers <strong>can still view and cancel</strong> reservations, service bookings and waitlist entries they already have.</li>
+        <li>The shop's own <strong>coupons</strong> can no longer be used; the platform's own promotions are not affected.</li>
+      </ul>
+    </li>
+    <li><strong>Platform Integration:</strong> orders sent by delivery platforms keep coming in, and you can still <strong>disconnect</strong> an integration from the dashboard; however, the integration's other settings and list screens are closed. The downgrade confirmation window may say "connected delivery platform(s) will be disconnected", which means you will no longer be able to manage them in the dashboard; the platform does not disconnect them automatically.</li>
+    <li><strong>Staff Management:</strong> scheduled shifts and pending leave requests can no longer be viewed or processed. <strong>Inventory:</strong> ingredient stock is no longer tracked.</li>
+  </ul>
+  <p class="note">Before you downgrade, the confirmation window tells you how many items in your own shop are affected, so please read it carefully before pressing "Confirm scheduled downgrade".</p>
+</section>
+
+<section class="card" id="special">
+  <h2>Special cases</h2>
+  <details open>
+    <summary>A cash shift is still open</summary>
+    <p>When you move from a plan with POS to one without it (Professional or Enterprise → Standard, or Trial → Standard), you must close the cash shift first.</p>
+    <ul>
+      <li><strong>Immediate changes (Trial to Standard, using the "Switch now" button):</strong> if a shift is still open, the system will not let you switch and shows "A cash shift is still open. Close it in POS before downgrading." The confirmation window has a <span class="btn-label">Go to POS to close the shift</span> button that takes you there directly.</li>
+      <li><strong>Scheduled downgrades:</strong> if a shift is still open on the effective date, the downgrade <strong>waits until the shift is closed before it takes effect</strong>. The page shows "Downgrade to Standard is scheduled but waiting for the open cash shift to be closed." Please close the shift as soon as you can.</li>
+    </ul>
+  </details>
+  <details>
+    <summary>A plan shows "Unavailable": it is not offered in your region</summary>
+    <p>Some plans are not yet open in certain countries or regions. The card says "This plan is not available in your region yet." and its button cannot be pressed. Please choose another plan.</p>
+  </details>
+  <details>
+    <summary>The Trial shows "Unavailable"</summary>
+    <p>You cannot go back after leaving the Trial, and the card says "The trial is for new shops only and cannot be re-entered."</p>
+  </details>
+  <details>
+    <summary>"The plan was just changed by someone else"</summary>
+    <p>If another owner account or platform staff member changes the plan at the same time as you, you will see "The plan was just changed by someone else. The page has been refreshed; please review and try again." Your action was <strong>not</strong> carried out, and the page has been updated to the latest state. Check it and try again.</p>
+  </details>
+  <details>
+    <summary>"You are already on this plan." or "There is no scheduled downgrade any more."</summary>
+    <p>This means the information on screen was out of date (for example, you already made the change in another tab). The system refreshes the page automatically, and you do not need to do anything else.</p>
+  </details>
+  <details>
+    <summary>"The subscription is inactive, so the plan cannot be changed. Please contact support."</summary>
+    <p>While the platform has deactivated a subscription, you cannot change plans yourself. Please contact platform staff.</p>
+  </details>
+</section>
+
+<section class="card" id="emails">
+  <h2>Notification emails you will receive</h2>
+  <p>In the following cases, the system sends an email to the contact email registered for your shop (please make sure it is an inbox you check):</p>
+  <ul>
+    <li><strong>Plan changed</strong>: when an upgrade takes effect immediately, or when a scheduled downgrade takes effect.</li>
+    <li><strong>Downgrade scheduled</strong>: the email states which day it takes effect and that you can cancel it in the dashboard.</li>
+    <li><strong>Downgrade cancelled</strong>.</li>
+    <li><strong>Usage limit reached</strong>: only one email per usage item per period.</li>
+  </ul>
+  <p class="note">At the moment these notification emails are written in English.</p>
+</section>
+
+<section class="card" id="who">
+  <h2>Who can change plans</h2>
+  <p>Only the <strong>shop owner</strong> (and platform staff) can see <span class="btn-label">Plan &amp; Usage</span> and change plans. Other staff accounts, such as chefs, service crew and cashiers, cannot see this page or make changes. The usage reminder banner is also shown only to the shop owner.</p>
+</section>
+
+<section class="card" id="faq">
+  <h2>FAQ</h2>
+  <details>
+    <summary>My trial has ended. Will my shop be deactivated?</summary>
+    <p>No. All features keep working after the trial ends, and the dashboard only reminds you to choose a plan. The only change is that usage limits are counted monthly (still using the Trial figures).</p>
+  </details>
+  <details>
+    <summary>Does my usage reset to zero after I upgrade?</summary>
+    <p>Yes. An upgrade takes effect immediately, a new 30-day period starts at that moment and usage is counted from 0, so a shop that could not take orders because it hit a limit can accept orders again right after upgrading.</p>
+  </details>
+  <details>
+    <summary>Will my data disappear after a downgrade?</summary>
+    <p>No. All records are kept; only the related dashboard screens are closed for now. If you later upgrade to a plan with that feature, the data comes back.</p>
+  </details>
+  <details>
+    <summary>Why do customers say they cannot place orders?</summary>
+    <p>The most common reason is that this period's order limit has been reached. Open <span class="btn-label">Plan &amp; Usage</span> in the dashboard and check "Usage this cycle"; if orders are full, there will be a red banner at the top. Upgrading restores ordering immediately; if you do not upgrade, you have to wait for the next period to begin.</p>
+  </details>
+  <details>
+    <summary>Can I go back to the Trial?</summary>
+    <p>No. Once you leave the Trial you cannot return to it, because the Trial is only for newly opened shops.</p>
+  </details>
+  <details>
+    <summary>Can a downgrade take effect right away?</summary>
+    <p>No. A downgrade always takes effect at the end of the current period, and you can cancel it before then.</p>
+  </details>
+  <details>
+    <summary>Does changing plans cost anything?</summary>
+    <p>Changing plans in the dashboard currently requires no online payment. If any charges are introduced later, the platform will announce them separately.</p>
+  </details>
+  <details>
+    <summary>My usage is full but I do not want to upgrade. What can I do?</summary>
+    <p>You can wait for the next period to begin (after the trial ends, that is the 1st of next month; on a paid plan, it is the end date of the current period, shown at the top right of "Usage this cycle"). Until then, new orders and receipt printing are paused.</p>
+  </details>
+</section>
+
+<section class="card" id="help">
+  <h2>Getting help</h2>
+  <ul>
+    <li>At the top right of the "Choose a plan" section in <span class="btn-label">Plan &amp; Usage</span> there is a "Plans and usage guide" link, which opens this page.</li>
+    <li>If a plan cannot be changed, your subscription is inactive, or you want to confirm which plan suits your shop, please contact platform staff (the contact who set up your shop's account).</li>
+  </ul>
+</section>
+
+<footer>MakanMasak · Plans, Trial and Usage · Based on system behaviour as of November 2026</footer>
+
+</main>
+</body>
+</html>

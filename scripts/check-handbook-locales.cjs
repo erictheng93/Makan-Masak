@@ -163,6 +163,47 @@ for (const [src, dest] of published) {
   }
 }
 
+// plans-and-usage.html: the shop owner's plans/trial/usage page. Same contract
+// as the handbook (zh-TW master, translated copies keep its tag skeleton) but
+// one standalone file per locale, and zh-CN is a sixth copy the admin app links.
+const PLANS_PAGE = "plans-and-usage.html";
+const PLANS_LOCALES = ["zh-CN", ...LOCALES.filter((l) => l !== "fil-PH")];
+// The lang attribute and the language switcher (own entry is a span, links
+// are relative to the page) are what a translated page must change.
+const noLang = (html) =>
+  html
+    .replace(/<html [^>]*>/, "<html>")
+    .replace(/<p class="langs"[\s\S]*?<\/p>/, "");
+const plansMaster = noLang(read(path.join(MANUALS, PLANS_PAGE)));
+for (const locale of PLANS_LOCALES) {
+  const rel = `${locale}/${PLANS_PAGE}`;
+  const file = path.join(MANUALS, rel);
+  if (!fs.existsSync(file)) {
+    problems.push(`${rel} is missing`);
+    continue;
+  }
+  const sa = skeleton(plansMaster);
+  const sb = skeleton(noLang(read(file)));
+  if (sa.length !== sb.length || sa.some((tag, i) => tag !== sb[i])) {
+    problems.push(`${rel}: skeleton drifted (${firstDifference(sa, sb)})`);
+  }
+}
+for (const rel of [
+  PLANS_PAGE,
+  ...PLANS_LOCALES.map((l) => `${l}/${PLANS_PAGE}`),
+]) {
+  const target = path.join(PUBLISHED, rel);
+  if (!fs.existsSync(target)) {
+    problems.push(
+      `published: ${rel} is missing from onboarding-app/public/guide`,
+    );
+  } else if (read(target) !== read(path.join(MANUALS, rel))) {
+    problems.push(
+      `published: ${rel} is stale; copy it from docs/user-manuals/${rel}`,
+    );
+  }
+}
+
 if (problems.length > 0) {
   console.error("[check-handbook-locales] drift found:");
   for (const problem of problems) console.error(`  - ${problem}`);

@@ -3,6 +3,7 @@
 > **Bersyon**: 2.0
 > **Huling Na-update**: 2025-10-26
 > **Para sa**: May-ari ng Restaurant, Manager
+> **Mga plano, trial at paggamit**: Ang may-ari ng tindahan mismo ang nagpapalit ng plano sa "Plan & Usage" ng admin dashboard (agad ang upgrade, sa katapusan ng period ang downgrade, walang online payment). Tingnan ang [Plans, trial and usage (English)](../en-US/plans-and-usage.html).
 
 ---
 

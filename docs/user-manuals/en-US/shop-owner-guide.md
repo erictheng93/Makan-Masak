@@ -3,6 +3,7 @@
 > **Version**: 2.0
 > **Last Updated**: 2025-10-26
 > **Target Audience**: Restaurant Owners, Managers
+> **Plans, trial and usage**: Shop owners change plans themselves under "Plan & Usage" in the admin dashboard (upgrades are immediate, downgrades take effect at the end of the period, no online payment). See [Plans, trial and usage](../en-US/plans-and-usage.html).
 
 ---
 

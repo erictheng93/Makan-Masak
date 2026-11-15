@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>方案、试用期与用量 - MakanMasak</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --card: #FFFFFF;
+    --text: #1C1C1E;
+    --muted: #6E6E73;
+    --primary-strong: #B04F09; /* onboarding primary-700, text on white (5.3:1) */
+    --brand: #F38020; /* Cloudflare orange, onboarding primary-500: fills only */
+    --success: #34C759;
+    --warning: #FF9500;
+    --error: #FF3B30;
+    --soft-blue: #E8F1FF;
+    --soft-orange: #FFF4E5;
+    --soft-green: #EAF8EE;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    font-size: 17px;
+    line-height: 1.75;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 { font-size: 30px; margin: 0 0 6px; }
+  header p { color: var(--muted); margin: 0; }
+  .langs { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin: 0 0 20px; font-size: 15px; }
+  .langs a { color: var(--primary-strong); font-weight: 600; }
+  .langs [aria-current] { color: var(--muted); font-weight: 600; }
+  .card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    scroll-margin-top: 16px;
+  }
+  h2 { font-size: 22px; margin: 0 0 12px; }
+  h3 { font-size: 18px; margin: 20px 0 8px; }
+  .step-no {
+    flex: none;
+    width: 28px; height: 28px;
+    border-radius: 999px;
+    background: var(--brand);
+    color: var(--text); /* #1C1C1E on #F38020 is 6.4:1; white is 2.65:1 */
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .toc a { display: inline-block; background: #FEF4EA; color: var(--primary-strong); border-radius: 999px; padding: 4px 14px; font-weight: 600; font-size: 15px; text-decoration: none; }
+  .tip, .warn, .ok {
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin: 14px 0;
+  }
+  .tip { background: var(--soft-blue); }
+  .warn { background: var(--soft-orange); }
+  .ok { background: var(--soft-green); }
+  .tip > strong:first-child, .warn > strong:first-child, .ok > strong:first-child { display: block; margin-bottom: 2px; }
+  .btn-label {
+    display: inline-block;
+    background: var(--brand);
+    color: var(--text); /* #1C1C1E on #F38020 is 6.4:1; white is 2.65:1 */
+    border-radius: 999px;
+    padding: 0 12px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .table-scroll { overflow-x: auto; margin: 8px 0 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  th, td { text-align: left; padding: 10px 8px; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 14px; }
+  tr + tr td { box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.06); }
+  td:first-child { font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .yes { color: #1E7B38; font-weight: 700; }
+  .no { color: var(--muted); }
+  .note { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+  ol, ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  details { background: var(--bg); border-radius: 16px; padding: 12px 16px; margin: 10px 0; }
+  summary { font-weight: 600; cursor: pointer; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; margin-top: 28px; }
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    main { padding: 24px 16px 48px; }
+    .card { padding: 20px 16px; }
+    table { font-size: 14px; }
+    th, td { padding: 8px 4px; }
+  }
+  @media print {
+    body { background: #FFFFFF; font-size: 13pt; }
+    .card { box-shadow: none; break-inside: avoid; border-radius: 0; padding: 12px 0; }
+    details { background: none; }
+    details > * { display: block; }
+    .langs, .toc { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>方案、试用期与用量</h1>
+  <p>给店主的说明：怎么查看当前的方案和用量，以及自己更换方案</p>
+</header>
+
+<p class="langs" aria-label="语言">
+  <span aria-current="page">简体中文</span>
+  <a href="../plans-and-usage.html" hreflang="zh-Hant">繁體中文</a>
+  <a href="../en-US/plans-and-usage.html" hreflang="en">English</a>
+  <a href="../ja-JP/plans-and-usage.html" hreflang="ja">日本語</a>
+  <a href="../vi-VN/plans-and-usage.html" hreflang="vi">Tiếng Việt</a>
+  <a href="../id-ID/plans-and-usage.html" hreflang="id">Bahasa Indonesia</a>
+</p>
+
+<section class="card" id="overview">
+  <h2>先看重点</h2>
+  <ul>
+    <li>MakanMasak 有四种方案：<strong>试用版、标准版、专业版、企业版</strong>。每家新店都从<strong>试用版</strong>开始，试用 <strong>180 天</strong>，所有功能都能用。</li>
+    <li><strong>试用期结束，不会被停用。</strong>系统只会提醒你选择方案，店里照常营业。</li>
+    <li>每个方案都有<strong>订单数、打印数</strong>等用量上限。用到 80% 会提醒；用满后，新的订单和小票打印会暂停，直到下一个计算期，或者你升级方案为止。</li>
+    <li>方案由<strong>店主自己</strong>在后台的 <span class="btn-label">订阅与用量</span> 更换，<strong>不需要在线支付</strong>，也不用联系客服。</li>
+    <li><strong>升级立即生效</strong>，用量从 0 重新计算；<strong>降级在本期结束时才生效</strong>，生效前可以取消。</li>
+    <li>本页不介绍任何费用。如果以后有收费，平台会另行公告。</li>
+  </ul>
+  <ul class="toc" aria-label="本页内容">
+    <li><a href="#plans">四种方案对比</a></li>
+    <li><a href="#trial">试用期</a></li>
+    <li><a href="#usage">用量怎么算</a></li>
+    <li><a href="#limit">用量用满时</a></li>
+    <li><a href="#upgrade">升级</a></li>
+    <li><a href="#downgrade">降级与取消</a></li>
+    <li><a href="#lost-features">失去功能的影响</a></li>
+    <li><a href="#special">特殊情况</a></li>
+    <li><a href="#emails">通知邮件</a></li>
+    <li><a href="#who">谁可以更改</a></li>
+    <li><a href="#faq">常见问题</a></li>
+    <li><a href="#help">需要帮助</a></li>
+  </ul>
+</section>
+
+<section class="card" id="plans">
+  <h2>四种方案对比</h2>
+  <h3>包含的功能</h3>
+  <div class="table-scroll" role="region" aria-label="各方案包含的功能" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">功能</th><th scope="col">试用版</th><th scope="col">标准版</th><th scope="col">专业版</th><th scope="col">企业版</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>菜单管理</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>桌位管理</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>线上点餐</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>POS 收银</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>厨房显示</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>出单列印</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>优惠券</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>订位候位</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>数据分析</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>AI 分析</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>外送整合</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>忠诚方案</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>食材库存</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+        <tr><td>人事管理</td><td><span class="yes" aria-label="包含">✓</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="no" aria-label="不包含">—</span></td><td><span class="yes" aria-label="包含">✓</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">以上是各方案的标准内容。平台人员可以另外为单个店铺开通或关闭个别功能，这类个别设置在你自己更换方案时会保留。少数功能在部分国家或地区不开放，即使方案包含也不会出现。</p>
+
+  <h3>用量上限</h3>
+  <div class="table-scroll" role="region" aria-label="各方案的用量上限" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">项目</th><th scope="col" class="num">试用版</th><th scope="col" class="num">标准版</th><th scope="col" class="num">专业版</th><th scope="col" class="num">企业版</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>每期订单</td><td class="num">3,000（整个试用期合计）</td><td class="num">1,000</td><td class="num">10,000</td><td class="num">不限</td></tr>
+        <tr><td>每期打印</td><td class="num">3,000（整个试用期合计）</td><td class="num"><span class="no">不含</span></td><td class="num">10,000</td><td class="num">不限</td></tr>
+        <tr><td>每期 AI 请求</td><td class="num">10</td><td class="num"><span class="no">不含</span></td><td class="num"><span class="no">不含</span></td><td class="num">不限</td></tr>
+        <tr><td>存储空间</td><td class="num">1 GB</td><td class="num">5 GB</td><td class="num">50 GB</td><td class="num">不限</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">“期”的算法见下方“用量怎么算”。“不含”表示该方案没有对应功能（标准版没有出单列印；标准版和专业版没有 AI 分析），所以也没有这项额度；若平台另外为你的店开通该功能，则以平台设置为准。存储空间的数字仅供参考，用到上限不会被拦下。“API 请求”也会出现在用量清单里，同样只是记录，不会拦下任何操作。</p>
+</section>
+
+<section class="card" id="trial">
+  <h2>试用期</h2>
+  <ul>
+    <li>每家新店都从<strong>试用版</strong>开始，<strong>180 天</strong>，所有功能都能用。</li>
+    <li>在 <span class="btn-label">订阅与用量</span> 页面，当前方案下方会写着“试用期剩余 N 天”。</li>
+    <li>试用版的订单和打印上限是<strong>整个试用期的总数</strong>（各 3,000），不是每个月重新计算。</li>
+  </ul>
+  <h3>试用期结束后</h3>
+  <div class="ok">
+    <strong>什么都不会被关掉</strong>
+    所有功能照常使用，店里不需要停业。后台只会出现提醒：顶部有一条横幅“试用期已结束。所有功能仍可继续使用，但请选择方案以支持 MakanMasak。”，每次登录还会弹出一次“试用期已结束”窗口，你可以点“继续使用”关掉，或点“选择方案”直接去挑方案。
+  </div>
+  <ul>
+    <li>试用期结束后、在你选择方案之前，用量上限仍是试用版的数字，但改为<strong>按日历月</strong>计算（每月重新归零）。</li>
+    <li>离开试用版（选择标准版、专业版或企业版）<strong>立即生效</strong>。</li>
+    <li><strong>离开试用版之后，就不能再回到试用版。</strong>试用版只提供给新开的店。</li>
+  </ul>
+</section>
+
+<section class="card" id="usage">
+  <h2>用量怎么算、去哪里看</h2>
+  <p>系统会统计三种有上限的用量：</p>
+  <ul>
+    <li><strong>创建订单</strong>：每创建一笔新订单算 1。包括顾客在线上或扫二维码下的单、团体订单、跨店铺的合并结账，以及员工代客创建的订单。</li>
+    <li><strong>打印任务</strong>：每打印一次小票算 1。</li>
+    <li><strong>AI 请求</strong>：使用 AI 分析功能时计算。</li>
+  </ul>
+  <h3>“一期”是多久</h3>
+  <div class="table-scroll" role="region" aria-label="用量的计算期" tabindex="0">
+    <table>
+      <thead>
+        <tr><th scope="col">你的情况</th><th scope="col">用量怎么算</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>试用期内</td><td>整个试用期（180 天）合计，不重新计算</td></tr>
+        <tr><td>试用期结束、尚未选方案</td><td>每个日历月，月初归零</td></tr>
+        <tr><td>标准版、专业版、企业版</td><td>从你选择该方案的那一刻起，每 30 天为一期，期满自动进入下一期并从 0 开始</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">日历月的起止以世界标准时间（UTC）为准，与当地时间有时差，例如中国是每月 1 日早上 8 点归零。</p>
+  <h3>在哪里看</h3>
+  <ol>
+    <li>登录后台，从左侧菜单选 <span class="btn-label">订阅与用量</span>。</li>
+    <li>“本期用量”区块会列出每一项已使用的数量、上限，以及这一期的起止日期。</li>
+    <li>进度条会随用量变色：未到 80% 是蓝色，达到 80% 是橙色，用满是红色。</li>
+  </ol>
+  <h3>快用完时的提醒</h3>
+  <p>用到上限的 <strong>80%</strong>，后台顶部会出现橙色横幅，例如“本期订单已使用 85%（2,550/3,000）”，旁边有 <span class="btn-label">查看方案</span> 按钮。你可以点右边的 ✕ 先关掉（本次登录期间不再显示）。这个提醒只有店主看得到。</p>
+</section>
+
+<section class="card" id="limit">
+  <h2>用量用满时会怎样</h2>
+  <p>用量达到上限后，到<strong>下一个计算期开始</strong>或<strong>你升级方案</strong>之前：</p>
+  <ul>
+    <li><strong>新订单会被拒绝</strong>：顾客在线上或扫二维码无法下单，员工也无法代客创建新订单、开团体订单。<strong>已经成立的订单不受影响</strong>，照常制作、出餐、结账。</li>
+    <li><strong>无法打印小票</strong>。</li>
+    <li>其他功能不受影响。</li>
+  </ul>
+  <p>此时后台顶部会出现红色横幅，不能关闭：“已达订单上限，顾客目前无法下单”或“已达打印上限，目前无法打印小票和单据”。系统也会给你发一封通知邮件（见“通知邮件”）。</p>
+  <div class="tip">
+    <strong>最快恢复的方法：升级方案</strong>
+    升级立即生效，而且用量会从 0 重新计算，所以刚刚用满的店，升级后马上就能再接单。做法见下一节。
+  </div>
+  <p>顾客那边看到的只是“现在无法下单”，建议你在用量快用完时（看到橙色横幅）就先处理，不要等顾客来问你才发现。</p>
+</section>
+
+<section class="card" id="upgrade">
+  <h2>升级方案（立即生效）</h2>
+  <p>升级是指从低档换到高档：<strong>标准版 → 专业版 → 企业版</strong>。从试用版换到<strong>任何</strong>其他方案，也立即生效；换到功能比试用版少的方案（例如标准版）时，卡片上的按钮写的是 <span class="btn-label">立即更改</span>，确认窗口的按钮是 <span class="btn-label">确认更改</span>。</p>
+  <ol>
+    <li>登录后台，从左侧菜单选 <span class="btn-label">订阅与用量</span>。（用量提醒横幅上的 <span class="btn-label">查看方案</span>、试用期结束横幅上的 <span class="btn-label">选择方案</span>，都会直接带你到下一步。）</li>
+    <li>往下找到“<strong>选择方案</strong>”区块。四种方案各一张卡片，写有每期上限和包含的功能；当前的方案标有“当前方案”。</li>
+    <li>在想要的方案卡片上点 <span class="btn-label">立即升级</span>。</li>
+    <li>屏幕上会弹出确认窗口“更改为○○版”，写着“将立即生效。”和“本期用量将从 0 重新计算。”，并列出“新增的功能”。确认无误后点 <span class="btn-label">确认升级</span>。</li>
+    <li>看到“方案已更改为○○版”就完成了。顶部的橙色或红色横幅很快会消失。</li>
+  </ol>
+  <div class="ok">
+    <strong>升级之后</strong>
+    新功能马上出现；用量归零，新的 30 天计算期从这一刻开始；如果你之前预约了降级，也会一并取消。全程不需要付款，也不用联系任何人。
+  </div>
+</section>
+
+<section class="card" id="downgrade">
+  <h2>降级方案与取消降级</h2>
+  <p>降级是指从高档换到低档，例如专业版 → 标准版。降级<strong>不会马上生效</strong>，而是等<strong>本期结束</strong>才换，在那之前你仍然可以使用现有方案的全部功能。</p>
+  <h3>预约降级</h3>
+  <ol>
+    <li>在 <span class="btn-label">订阅与用量</span> 的“选择方案”区块，找到想换到的较低方案。</li>
+    <li>点卡片上的 <span class="btn-label">预约降级，○月○日 生效</span>（日期就是本期结束日）。</li>
+    <li>确认窗口会写“将于本期结束（日期）生效，在此之前仍可使用当前方案的功能。”和“新方案的用量自生效日起重新计算。”，并列出“将失去的功能”和“更改后的影响”，例如“3 笔未来的预订将无法在后台查看”。请逐项看过。</li>
+    <li>确定要换就点 <span class="btn-label">确认预约降级</span>，会看到“已预约降级为○○版”。</li>
+  </ol>
+  <p>预约之后，页面顶部会出现橙色提示“已预约于 ○月○日 降级为 ○○版”，方案卡片上也会标示“已预约于 ○月○日 生效”。如果你再预约另一个降级，会取代原来那一笔。</p>
+  <h3>生效时间</h3>
+  <p>本期结束时，系统会自动换成新方案，并开始新的一期、用量从 0 算起。系统每天处理一次已预约的变更，所以实际切换的时间可能比画面上的日期晚几个小时；在那之前你仍在原来的方案。</p>
+  <h3>取消已预约的降级</h3>
+  <ol>
+    <li>在 <span class="btn-label">订阅与用量</span> 页面顶部的橙色提示上，点 <span class="btn-label">取消降级</span>（预约要换到的那张方案卡片上，按钮也会变成同一个）。</li>
+    <li>在“取消已预约的降级？”窗口确认；你会继续使用当前的方案。看到“已取消降级”就完成了。</li>
+  </ol>
+  <p>生效之后就不能取消了；想换回去，要按“升级”的步骤再升级一次。</p>
+</section>
+
+<section class="card" id="lost-features">
+  <h2>失去某个功能之后会怎样</h2>
+  <p>降级（或离开试用版换到功能较少的方案）后，方案里没有的功能会这样处理：</p>
+  <ul>
+    <li><strong>后台的对应页面会关闭。</strong>例如降到标准版后，POS 收银、厨房显示、优惠券、订位候位、数据分析的页面都不能再进入。</li>
+    <li><strong>你的数据不会被删除。</strong>预订、服务预约、班表、食材、优惠券等记录都还在，只是暂时看不到；以后再升级回有这些功能的方案，一切会恢复。</li>
+    <li><strong>顾客端：</strong>
+      <ul>
+        <li>顾客<strong>不能再新增</strong>线上预订、服务预约，也不能加入候位；候位的实时排队情况也不再提供。</li>
+        <li>顾客<strong>仍然可以查看并取消</strong>他们已有的预订、服务预约和候位。</li>
+        <li>店铺自己的<strong>优惠券</strong>不能再使用；平台自身的优惠活动不受影响。</li>
+      </ul>
+    </li>
+    <li><strong>外送整合：</strong>外卖平台传来的订单仍会继续进来，你也仍可以在后台把整合<strong>断开连接</strong>；但整合的其他设置和列表页面会关闭。降级确认窗口上可能写着“已连接的外卖平台将断开连接”，意思是你将无法在后台管理它们，平台并不会自动断线。</li>
+    <li><strong>人事管理：</strong>已排定的班表、待审核的请假申请将无法查看或处理。<strong>食材库存：</strong>食材库存停止跟踪。</li>
+  </ul>
+  <p class="note">降级前，确认窗口会根据你店里的实际数据告诉你受影响的数量，请在点“确认预约降级”前看清楚。</p>
+</section>
+
+<section class="card" id="special">
+  <h2>特殊情况</h2>
+  <details open>
+    <summary>还有没结束的收银班次</summary>
+    <p>从有 POS 的方案换到没有 POS 的方案（专业版或企业版 → 标准版；或试用版 → 标准版），要先把收银班次结束。</p>
+    <ul>
+      <li><strong>立即生效的情况（试用版换到标准版，按钮为“立即更改”）：</strong>班次还没结束时，系统不会让你换，会提示“仍有未结束的收银班次，请先到 POS 结束班次再降级。”确认窗口上有 <span class="btn-label">前往 POS 结束班次</span> 可以直接过去。</li>
+      <li><strong>预约的降级：</strong>到了生效日如果班次还开着，降级会<strong>等到班次结束后才生效</strong>。页面上会显示“已预约降级为○○版，但仍有未结束的收银班次，结束班次后才会生效。”记得尽快结班。</li>
+    </ul>
+  </details>
+  <details>
+    <summary>方案显示“无法选择”：这个方案在你的地区没有提供</summary>
+    <p>有些方案在部分国家或地区尚未开放，卡片上会写“此方案在您所在的地区暂未提供。”，按钮不能点。请改选其他方案。</p>
+  </details>
+  <details>
+    <summary>试用版显示“无法选择”</summary>
+    <p>离开试用版之后就不能回去，卡片上会写“试用版仅限新店铺，无法再回到试用版。”</p>
+  </details>
+  <details>
+    <summary>“方案刚刚已被其他人更改”</summary>
+    <p>如果有另一位店主账号或平台人员在你操作的同时也改了方案，你会看到“方案刚刚已被其他人更改，已为您刷新页面，请确认后再试。”你的操作<strong>没有</strong>被执行，页面已刷新成最新状态，确认后重新操作一次即可。</p>
+  </details>
+  <details>
+    <summary>“您已经在使用这个方案”或“当前没有已预约的降级”</summary>
+    <p>说明画面上的信息已经过期（例如在另一个标签页已经操作过），系统会自动刷新页面，不需要再做什么。</p>
+  </details>
+  <details>
+    <summary>“订阅当前已停用，无法更改方案”</summary>
+    <p>订阅被平台停用时，不能自己换方案，请联系平台人员。</p>
+  </details>
+</section>
+
+<section class="card" id="emails">
+  <h2>你会收到的通知邮件</h2>
+  <p>以下情况，系统会发邮件到店铺登记的联系邮箱（请确认它是你会查看的邮箱）：</p>
+  <ul>
+    <li><strong>方案已更改</strong>：升级立即生效，或已预约的降级到期生效时。</li>
+    <li><strong>已预约降级</strong>：邮件中会写哪一天生效，以及可以到后台取消。</li>
+    <li><strong>已取消降级</strong>。</li>
+    <li><strong>用量已达上限</strong>：同一项用量在同一期只发一次。</li>
+  </ul>
+  <p class="note">目前这些通知邮件的内容是英文。</p>
+</section>
+
+<section class="card" id="who">
+  <h2>谁可以更改方案</h2>
+  <p>只有<strong>店主</strong>（以及平台人员）可以看到 <span class="btn-label">订阅与用量</span> 并更改方案。厨师、服务员、收银员等其他员工账号看不到这一页，也不能更改。用量提醒横幅同样只显示给店主。</p>
+</section>
+
+<section class="card" id="faq">
+  <h2>常见问题</h2>
+  <details>
+    <summary>我的试用到期了，店会被停用吗？</summary>
+    <p>不会。试用期结束后所有功能仍可继续使用，后台只会提醒你选择方案。只是用量上限会改为每月重新计算（仍是试用版的数字）。</p>
+  </details>
+  <details>
+    <summary>升级后，原来的用量会归零吗？</summary>
+    <p>会。升级立即生效，新的 30 天计算期从升级那一刻开始，用量从 0 算起，所以因为用量用满而无法接单的店，升级后马上就能再接单。</p>
+  </details>
+  <details>
+    <summary>降级后，数据会丢失吗？</summary>
+    <p>不会。记录都会保留，只是相关的后台页面暂时关闭；以后升级回有该功能的方案，数据就会回来。</p>
+  </details>
+  <details>
+    <summary>为什么顾客说无法下单？</summary>
+    <p>最常见的原因是本期的订单数已达上限。到后台 <span class="btn-label">订阅与用量</span> 看“本期用量”，如果订单已满，顶部会有红色横幅。升级方案即可立刻恢复；不升级的话，要等下一个计算期开始。</p>
+  </details>
+  <details>
+    <summary>可以改回试用版吗？</summary>
+    <p>不行。离开试用版之后就不能再回到试用版，试用版只提供给新开的店。</p>
+  </details>
+  <details>
+    <summary>降级可以马上生效吗？</summary>
+    <p>不行。降级一律在本期结束时生效，生效前可以取消。</p>
+  </details>
+  <details>
+    <summary>更换方案要付费吗？</summary>
+    <p>目前在后台更换方案不需要在线支付。如果以后有任何收费，平台会另行公告。</p>
+  </details>
+  <details>
+    <summary>用量用满了，但我不想升级，怎么办？</summary>
+    <p>可以等下一个计算期开始（试用期结束后是下个月 1 日；付费方案是当前这一期的结束日，日期显示在“本期用量”右上角）。在那之前，新订单和小票打印会暂停。</p>
+  </details>
+</section>
+
+<section class="card" id="help">
+  <h2>需要帮助</h2>
+  <ul>
+    <li>在 <span class="btn-label">订阅与用量</span> 的“选择方案”区块右上角，有“方案与用量说明”链接，会打开本页。</li>
+    <li>方案无法更改、订阅被停用，或想确认自己的店适用哪个方案，请联系平台人员（为你开通店铺账号的那个窗口）。</li>
+  </ul>
+</section>
+
+<footer>MakanMasak · 方案、试用期与用量 · 内容依据 2026 年 11 月的系统行为整理</footer>
+
+</main>
+</body>
+</html>
