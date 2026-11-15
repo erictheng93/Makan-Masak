@@ -415,10 +415,16 @@ describe("me routes", () => {
     usageMocks.getCurrentUsage.mockResolvedValue({
       cycleStartAt: 1780000000000,
       cycleEndAt: 1782592000000,
-      meters: [{ key: "orders", used: 42, limit: 100 }],
+      meters: [
+        { meterKey: "orders.created", total: 42, state: "ok" },
+        { meterKey: "api.requests", total: 7, state: "ok" },
+      ],
     });
 
-    const response = await request("/usage");
+    const response = await request("/usage", {
+      ...createEnv(),
+      QUOTA_ENFORCEMENT_MODE: "enforce",
+    } as never);
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
@@ -426,7 +432,16 @@ describe("me routes", () => {
       data: {
         cycleStartAt: 1780000000000,
         cycleEndAt: 1782592000000,
-        meters: [{ key: "orders", used: 42, limit: 100 }],
+        // Only gated meters in "enforce" mode report enforced: true.
+        meters: [
+          {
+            meterKey: "orders.created",
+            total: 42,
+            state: "ok",
+            enforced: true,
+          },
+          { meterKey: "api.requests", total: 7, state: "ok", enforced: false },
+        ],
       },
     });
     expect(usageMocks.getCurrentUsage).toHaveBeenCalledWith("restaurant-1");

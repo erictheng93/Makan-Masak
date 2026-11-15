@@ -6,13 +6,17 @@ import {
   usageEvents,
   usageMeterBuckets,
   usageMeters,
-  TRIAL_DURATION_DAYS,
   type D1Database,
   type MeterKey,
 } from "@makanmasak/database";
 import { generateUUID } from "@makanmasak/utils";
 import type { Env } from "../types/env";
 import { listClosedUnfoldedBuckets } from "../shared/utils/usage-buckets";
+import {
+  calendarMonthCycle,
+  resolveUsageCycle,
+  type UsageCycle,
+} from "../shared/utils/usage-cycle";
 
 type DrizzleDb = ReturnType<typeof drizzle>;
 type SqliteBatchItem = BatchItem<"sqlite">;
@@ -25,60 +29,25 @@ interface SubscriptionCycleRow {
   createdAt: Date;
 }
 
-interface UsageCycle {
-  startAt: number;
-  endAt: number;
-}
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 const PENDING_EVENT_GROUP_LIMIT = 5000;
 const CLOSED_BUCKET_LIMIT = 5000;
 
-function fallbackMonthlyCycle(occurredAt: number): UsageCycle {
-  const occurred = new Date(occurredAt);
-  const startAt = Date.UTC(
-    occurred.getUTCFullYear(),
-    occurred.getUTCMonth(),
-    1,
-  );
-  const endAt = Date.UTC(
-    occurred.getUTCFullYear(),
-    occurred.getUTCMonth() + 1,
-    1,
-  );
-  return { startAt, endAt };
-}
-
-function resolveUsageCycle(
+function cycleForSubscription(
   subscription: SubscriptionCycleRow | null,
   occurredAt: number,
 ): UsageCycle {
-  if (!subscription) {
-    return fallbackMonthlyCycle(occurredAt);
-  }
-
-  if (
-    subscription.planTier !== "trial" &&
-    subscription.billingCycleStartAt !== null &&
-    subscription.billingCycleEndAt !== null
-  ) {
-    return {
-      startAt: subscription.billingCycleStartAt.getTime(),
-      endAt: subscription.billingCycleEndAt.getTime(),
-    };
-  }
-
-  if (subscription.planTier === "trial") {
-    const createdAt = subscription.createdAt.getTime();
-    const endAt =
-      subscription.trialEndsAt?.getTime() ??
-      createdAt + TRIAL_DURATION_DAYS * DAY_MS;
-    // Events after the trial window belong to a monthly cycle: the tier stays
-    // "trial" (nag-only), so the readers use the same fallback.
-    if (occurredAt < endAt) return { startAt: createdAt, endAt };
-  }
-
-  return fallbackMonthlyCycle(occurredAt);
+  if (!subscription) return calendarMonthCycle(occurredAt);
+  return resolveUsageCycle(
+    {
+      planTier: subscription.planTier,
+      trialEndsAtMs: subscription.trialEndsAt?.getTime() ?? null,
+      billingCycleStartAtMs:
+        subscription.billingCycleStartAt?.getTime() ?? null,
+      billingCycleEndAtMs: subscription.billingCycleEndAt?.getTime() ?? null,
+      createdAtMs: subscription.createdAt.getTime(),
+    },
+    occurredAt,
+  );
 }
 
 /**
@@ -108,7 +77,7 @@ function createCycleResolver(db: DrizzleDb) {
       cache.set(restaurantId, row ?? null);
     }
 
-    return resolveUsageCycle(cache.get(restaurantId) ?? null, occurredAt);
+    return cycleForSubscription(cache.get(restaurantId) ?? null, occurredAt);
   };
 }
 

@@ -39,6 +39,10 @@ export const AUDIT_ACTIONS = {
   // 被記錄，不是訂單／訂位的強制阻擋（本規格明確不做那個）。
   MEMBER_BLOCK_STATUS_CHANGE: "member_block_status_change",
 
+  // 方案自助變更（請求、取消、套用）：resource 為 shop_subscriptions，
+  // 細節在 changes.metadata.event；金額相關稽核另寫 payment_audit_log。
+  PLAN_CHANGE: "plan_change",
+
   // 系統相關
   SYSTEM_CONFIG: "system_config",
   DATA_EXPORT: "data_export",

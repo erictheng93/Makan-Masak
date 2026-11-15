@@ -3,8 +3,8 @@
  *
  * Enforces per-restaurant module access based on their subscription.
  * - Admin (role 0) bypasses the gate unconditionally.
- * - Results are cached in KV for 5 minutes to avoid DB round-trips on every request.
- * - The cache is invalidated when an admin updates a subscription.
+ * - Results are cached in KV for an hour (CACHE_TTL_SECONDS) to avoid DB round-trips.
+ * - The cache is invalidated on every subscription write (admin, owner plan change, cron).
  *
  * Usage:
  *   router.get('/kitchen', authMiddleware, moduleGate('kitchen_display'), handler)

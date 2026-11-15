@@ -104,7 +104,7 @@ describe("BillingCycleService", () => {
 
     expect(db.batch).not.toHaveBeenCalled();
     expect(statements).toHaveLength(1);
-    expect(statements[0].values).toEqual([now]);
+    expect(statements[0].values).toEqual([now, null]);
   });
 
   it("closes paid cycles with module overrides and usage overages", async () => {

@@ -17,6 +17,9 @@ export class ApiError extends Error {
 
 const SENSITIVE_DETAIL_KEY =
   /password|passcode|token|secret|authorization|cookie|api[-_]?key|key/i;
+// Names that match `key` above but carry no secret. `meterKey` is how a 429
+// QUOTA_EXCEEDED tells a client which shop-level limit was hit.
+const PUBLIC_DETAIL_KEYS = new Set(["meterKey"]);
 
 export function sanitizeApiErrorDetails(details: unknown): unknown {
   const seen = new WeakSet<object>();
@@ -41,9 +44,10 @@ export function sanitizeApiErrorDetails(details: unknown): unknown {
       for (const [key, child] of Object.entries(
         value as Record<string, unknown>,
       )) {
-        sanitized[key] = SENSITIVE_DETAIL_KEY.test(key)
-          ? "[REDACTED]"
-          : sanitize(child, depth + 1);
+        sanitized[key] =
+          SENSITIVE_DETAIL_KEY.test(key) && !PUBLIC_DETAIL_KEYS.has(key)
+            ? "[REDACTED]"
+            : sanitize(child, depth + 1);
       }
       return sanitized;
     }

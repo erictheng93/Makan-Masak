@@ -55,20 +55,23 @@ API key 存在 `apiKeyEncrypted`，讀取時一律回 `"***"`，**不會**把明
 
 ### 4.1 三層決定「這家店能不能用某模組」
 
-`resolveModule`（`apps/api/src/middleware/moduleGate.ts:41`）的順序：
+`resolveModule`（`apps/api/src/middleware/moduleGate.ts`）與 `moduleGate` 的順序：
 
 1. `isActive` 為 false → 一律拒絕
-2. `trial` 方案且 `trialEndsAt` 已過 → 拒絕，訊息是「試用期已結束」
-3. `moduleOverrides[module]` 有值 → **以覆寫為準**（可強開也可強關）
-4. 否則回退到 `PLAN_DEFAULT_MODULES[planTier][module]`
+2. `moduleOverrides[module]` 有值 → **以覆寫為準**（可強開也可強關）
+3. 否則回退到 `PLAN_DEFAULT_MODULES[planTier][module]`
+4. 國家區域政策 `modules.disabled` 關掉的模組 → 拒絕（`MODULE_NOT_AVAILABLE_IN_REGION`）
+
+試用到期**不會**被拒絕：只是提醒（nag-only），方案仍是 `trial`、模組照常可用。
 
 role 0 完全繞過閘門。
 
 ### 4.2 快取
 
-訂閱狀態在 KV 快取 **5 分鐘**（`subscription:{restaurantId}`）。任何改動
-`is_active` / `plan_tier` / `module_overrides` 的寫入者——後台、billing webhook、cron——
-都必須呼叫 `invalidateSubscriptionCacheForEnv`，否則最長 5 分鐘內舊狀態仍然生效。
+訂閱狀態在 KV 快取 **1 小時**（`CACHE_TTL_SECONDS = 3600`，`subscription:{restaurantId}`）。
+任何改動 `is_active` / `plan_tier` / `module_overrides` 的寫入者——後台、店主自助換方案、
+billing webhook、cron——都必須呼叫 `invalidateSubscriptionCacheForEnv`，否則最長 1 小時內
+舊狀態仍然生效。
 
 ### 4.3 端點
 
@@ -77,6 +80,7 @@ role 0 完全繞過閘門。
 | 訂閱列表／單店 | `GET /api/v1/admin/subscriptions`、`/:restaurantId` | 0 |
 | 建立訂閱 | `POST /admin/subscriptions` | 0 |
 | 改模組／方案／狀態 | `PATCH /admin/subscriptions/:restaurantId/modules`、`/plan`、`/status` | 0 |
+| 店主自助換方案（無線上付款） | `GET /api/v1/billing/plan`、`GET /billing/plan/impact`、`POST /billing/plan/change`、`DELETE /billing/plan/pending` | 0、1 |
 | 用量與事件 | `GET /admin/subscriptions/:restaurantId/usage`、`/usage/events` | 0 |
 | 金流商回調 | `POST /api/v1/billing/webhooks/:provider` | 公開 + 驗簽 |
 
@@ -85,7 +89,16 @@ role 0 完全繞過閘門。
 配額與模組是兩件事：模組管「能不能用」，配額管「用多少」。
 `quotaGate(meterKey)` / `enforceQuota` 依 `PLAN_QUOTAS[planTier][meterKey]` 判斷，
 超過回 429 `QUOTA_EXCEEDED`。**`QUOTA_ENFORCEMENT_MODE` 預設是 `disabled`**——
-沒有設定成 `enforce` 時，配額只記錄不阻擋。
+沒有設定成 `enforce` 時，配額只記錄不阻擋。429 的 `error.details.meterKey` 指出是哪個
+店家配額用完（一般限流的 429 沒有這個欄位）。用量由每小時的 `usage-aggregator` 彙總；
+`GET /api/v1/me/usage` 的每個 meter 帶 `state`（`ok` / `warning` / `over`）與 `enforced`。
+
+### 4.5 店主自助換方案
+
+升級（basic < pro < enterprise）與離開 trial 立即生效，並開新的 30 天計量週期，用量從 0
+重新計算；降級排在當期週期結束時，由每日 billing cron 或店主下一次開方案頁時套用。
+不能回到 trial。店主換方案**保留**平台管理員給的模組覆寫；後台的 `PATCH .../plan`
+仍會清掉覆寫。細節見 `docs/architecture/modular-billing.md` 的 Plan Changes。
 
 ## 5. 系統設定
 
@@ -110,8 +123,9 @@ role 0 完全繞過閘門。
 | --- | --- | --- | --- |
 | 沒有訂閱紀錄 | 403「Subscription not found」 | `SUBSCRIPTION_NOT_FOUND` | 🟠 P1 |
 | 帳號沒有綁餐廳 | 403 | `NO_RESTAURANT` | 🟡 P2 |
-| 試用到期 | 403，訊息與一般模組未購買不同 | — | 🟡 P2 |
-| 剛改完模組但仍被擋 | KV 快取最長 5 分鐘；忘記失效就是這個症狀 | — | 🟠 P1 |
+| 試用到期 | 放行（nag-only），前端顯示提醒 | — | 🟡 P2 |
+| 剛改完模組但仍被擋 | KV 快取最長 1 小時；忘記失效就是這個症狀 | — | 🟠 P1 |
+| 降級時收銀班還開著 | 立即生效的換方案回 409；排程的降級延後到班別關閉 | `PLAN_CHANGE_BLOCKED_OPEN_SHIFT` | 🟡 P2 |
 | billing webhook 簽章錯誤 | 401 | `WEBHOOK_SIGNATURE_INVALID` | 🔴 P0 |
 | billing webhook body 不是 JSON | 400 | `WEBHOOK_INVALID_JSON` | 🟡 P2 |
 | 配額超過但模式是 `disabled` | 放行，只記錄 | — | 🟠 P1 |
@@ -125,7 +139,7 @@ role 0 完全繞過閘門。
 - `apps/api/src/middleware/moduleGate.ts` — 模組解析、KV 快取、失效
 - `apps/api/src/middleware/quotaGate.ts` — 配額與 `QUOTA_ENFORCEMENT_MODE`
 - `apps/api/src/features/subscriptions/routes/index.ts`
-- `apps/api/src/features/billing/routes/index.ts` + `services/BillingWebhookService.ts`
+- `apps/api/src/features/billing/routes/index.ts` + `services/BillingWebhookService.ts`、`services/PlanChangeService.ts`
 - `apps/api/src/features/analytics/routes/index.ts`、`ai-analytics/routes/index.ts`
 - `packages/ai-analytics/src/services/ProductAnalysisService.ts`
 

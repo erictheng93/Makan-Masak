@@ -3,7 +3,6 @@ import { ApiError } from "../shared/utils/api-error";
 import type { Env } from "../types/env";
 import {
   PLAN_QUOTAS,
-  TRIAL_DURATION_DAYS,
   type MeterKey,
   type MeterQuota,
   type PlanTier,
@@ -12,8 +11,11 @@ import {
   BILLING_NOTIFICATION_KINDS,
   BillingNotificationService,
   NOTIFICATION_CHANNELS,
+  quotaHardOwnerCopy,
+  restaurantContact,
 } from "../features/billing/services/BillingNotificationService";
 import { sumUnfoldedBucketQuantities } from "../shared/utils/usage-buckets";
+import { resolveUsageCycle } from "../shared/utils/usage-cycle";
 
 interface SubscriptionRow {
   plan_tier: PlanTier;
@@ -39,8 +41,6 @@ interface QuotaUser {
   restaurantId?: string | number | null;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 export function quotaExceeded(
   meterKey: MeterKey,
   hardLimit: number,
@@ -53,39 +53,36 @@ export function quotaExceeded(
   });
 }
 
-function getMode(env: Env): "disabled" | "warn" | "enforce" {
+function getMode(env: Pick<Env, "QUOTA_ENFORCEMENT_MODE">) {
   return env.QUOTA_ENFORCEMENT_MODE ?? "disabled";
 }
 
-function fallbackMonthlyCycle(now: number) {
-  const date = new Date(now);
-  return {
-    startAt: Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1),
-    endAt: Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1),
-  };
+/**
+ * Meters some route actually gates (quotaGate / enforceQuota). `api.requests`
+ * and `storage.bytes` are metered and shown, but nothing ever blocks on them.
+ */
+export const GATED_METER_KEYS: ReadonlySet<MeterKey> = new Set<MeterKey>([
+  "orders.created",
+  "print.jobs",
+  "ai.requests",
+]);
+
+/** True when reaching the hard limit of `meterKey` really blocks requests. */
+export function isMeterEnforced(
+  env: Pick<Env, "QUOTA_ENFORCEMENT_MODE">,
+  meterKey: MeterKey,
+): boolean {
+  return getMode(env) === "enforce" && GATED_METER_KEYS.has(meterKey);
 }
 
-function resolveCycle(subscription: SubscriptionRow, now: number) {
-  if (
-    subscription.plan_tier !== "trial" &&
-    subscription.billing_cycle_start_at_ms !== null &&
-    subscription.billing_cycle_end_at_ms !== null
-  ) {
-    return {
-      startAt: subscription.billing_cycle_start_at_ms,
-      endAt: subscription.billing_cycle_end_at_ms,
-    };
-  }
-
-  if (subscription.plan_tier === "trial") {
-    const endAt =
-      subscription.trial_ends_at_ms ??
-      subscription.created_at_ms + TRIAL_DURATION_DAYS * DAY_MS;
-    // Expired trials keep their tier (nag-only): monthly cycles from here on.
-    if (now < endAt) return { startAt: subscription.created_at_ms, endAt };
-  }
-
-  return fallbackMonthlyCycle(now);
+/** The thresholds enforceQuota applies, as a state an owner UI can show. */
+export function quotaState(
+  count: number,
+  quota: MeterQuota | undefined,
+): "ok" | "warning" | "over" {
+  if (!quota) return "ok";
+  if (count >= quota.hard) return "over";
+  return count >= quota.soft ? "warning" : "ok";
 }
 
 async function getSubscription<E extends { Bindings: Env }>(
@@ -185,14 +182,32 @@ async function notifyHardQuotaExceeded<E extends { Bindings: Env }>(
   hardLimit: number,
   current: number,
 ) {
-  const sendOp = new BillingNotificationService(c.env)
+  const notifications = new BillingNotificationService(c.env);
+  const dedupKey = `${meterKey}:cycle:${cycleStartAt}`;
+  const payload = { meterKey, cycleStartAt, hardLimit, current };
+  const sendOp = notifications
     .send({
       restaurantId,
       kind: BILLING_NOTIFICATION_KINDS.QUOTA_HARD,
-      dedupKey: `${meterKey}:cycle:${cycleStartAt}`,
+      dedupKey,
       channel: NOTIFICATION_CHANNELS.SLACK,
       text: `Quota hard limit reached for restaurant ${restaurantId}: ${meterKey} ${current}/${hardLimit}`,
-      payload: { meterKey, cycleStartAt, hardLimit, current },
+      payload,
+    })
+    .then(async (slack) => {
+      // The Slack dedup row already says "first time this meter hit its limit
+      // this cycle", so every later blocked request skips the owner lookup.
+      if (slack.duplicate) return;
+      const owner = await restaurantContact(c.env.DB, restaurantId);
+      await notifications.send({
+        restaurantId,
+        kind: BILLING_NOTIFICATION_KINDS.QUOTA_HARD_OWNER,
+        dedupKey,
+        channel: NOTIFICATION_CHANNELS.EMAIL,
+        recipient: owner?.email ?? null,
+        ...quotaHardOwnerCopy(owner?.name ?? "your restaurant", meterKey),
+        payload,
+      });
     })
     .catch((error) => {
       console.error("quotaGate.notification.failed", {
@@ -240,7 +255,16 @@ export async function enforceQuota<E extends { Bindings: Env }>(
   const quota = PLAN_QUOTAS[subscription.plan_tier]?.[meterKey];
   if (!quota) return;
 
-  const cycle = resolveCycle(subscription, Date.now());
+  const cycle = resolveUsageCycle(
+    {
+      planTier: subscription.plan_tier,
+      trialEndsAtMs: subscription.trial_ends_at_ms,
+      billingCycleStartAtMs: subscription.billing_cycle_start_at_ms,
+      billingCycleEndAtMs: subscription.billing_cycle_end_at_ms,
+      createdAtMs: subscription.created_at_ms,
+    },
+    Date.now(),
+  );
   // Independent reads: overlap them rather than paying three round trips.
   const [aggregated, pending, buckets] = await Promise.all([
     getAggregatedCount(c, restaurantId, meterKey, cycle.startAt),
@@ -248,8 +272,9 @@ export async function enforceQuota<E extends { Bindings: Env }>(
     getUnfoldedBucketCount(c, restaurantId, meterKey, cycle),
   ]);
   const effectiveCount = aggregated + pending + buckets;
+  const state = quotaState(effectiveCount, quota);
 
-  if (effectiveCount >= quota.hard) {
+  if (state === "over") {
     setQuotaWarning(c, meterKey, effectiveCount, quota);
     await notifyHardQuotaExceeded(
       c,
@@ -265,7 +290,7 @@ export async function enforceQuota<E extends { Bindings: Env }>(
     return;
   }
 
-  if (effectiveCount >= quota.soft) {
+  if (state === "warning") {
     setQuotaWarning(c, meterKey, effectiveCount, quota);
   }
 }

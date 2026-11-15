@@ -254,6 +254,17 @@ export default {
     }
 
     if (cronMatches(event.cron, "15 2 * * *")) {
+      // Before the cycle closer: a due downgrade snapshots its ending cycle on
+      // the old tier and then starts the next cycle on the new one. Its own
+      // job so a failure here never skips the closer.
+      await runJob("scheduled plan changes", async () => {
+        const { applyDuePlanChanges } =
+          await import("./features/billing/services/PlanChangeService");
+        console.log(
+          "[Cron] Scheduled plan changes result:",
+          await applyDuePlanChanges(env),
+        );
+      });
       await runJob("billing lifecycle", async () => {
         console.log("[Cron] Running billing cycle closer...");
         const { BillingCycleService } =

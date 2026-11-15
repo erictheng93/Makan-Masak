@@ -18,6 +18,11 @@ export const BILLING_NOTIFICATION_KINDS = {
   GRACE_PERIOD_START: "grace_period_start",
   ACCOUNT_SUSPENDED: "account_suspended",
   CYCLE_CLOSED: "cycle_closed",
+  /** Owner email the first time a meter reaches its hard limit in a cycle. */
+  QUOTA_HARD_OWNER: "quota_hard_owner",
+  PLAN_CHANGE_APPLIED: "plan_change_applied",
+  PLAN_CHANGE_SCHEDULED: "plan_change_scheduled",
+  PLAN_CHANGE_CANCELLED: "plan_change_cancelled",
 } as const;
 
 export const NOTIFICATION_CHANNELS = {
