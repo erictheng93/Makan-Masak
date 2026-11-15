@@ -122,7 +122,7 @@ const idID: Messages = {
     success: "Pengajuan terkirim",
     findApplication: "Cari pengajuan saya",
     status: "Status pengajuan",
-    default: "MakanMasak Pengajuan Toko",
+    default: "Pengajuan Toko MakanMasak",
   },
 
   home: {
