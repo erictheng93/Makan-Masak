@@ -368,7 +368,11 @@ const getTenantName = (tenantId: string) => {
                 <span v-else class="text-gray-400">-</span>
               </td>
               <td class="text-gray-500">
-                {{ new Date(check.checkedAt).toLocaleString() }}
+                {{
+                  check.checkedAt
+                    ? new Date(check.checkedAt).toLocaleString()
+                    : "-"
+                }}
               </td>
             </tr>
           </tbody>

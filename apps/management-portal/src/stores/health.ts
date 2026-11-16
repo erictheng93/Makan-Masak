@@ -61,7 +61,16 @@ export const useHealthStore = defineStore("health", () => {
   async function fetchAllHealthChecks() {
     loading.value = true;
     try {
-      healthChecks.value = await healthApi.getAllStatus();
+      const { tenants } = await healthApi.getAllStatus();
+      // The API returns one row per tenant with its latest check nested
+      // under `health`, not a HealthCheck[] — flatten it here.
+      healthChecks.value = tenants.map(({ tenantId, health }) => ({
+        id: tenantId,
+        tenantId,
+        status: health.status,
+        responseTimeMs: health.responseTimeMs ?? undefined,
+        checkedAt: health.lastCheck ?? "",
+      }));
       lastUpdated.value = new Date();
     } catch (e) {
       console.error("獲取健康狀態失敗:", e);

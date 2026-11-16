@@ -3096,7 +3096,7 @@ test.describe("Real system workflows", () => {
       await page.getByTestId("onboarding-district").fill("西屯區");
       await page.getByTestId("onboarding-country").selectOption("TW");
       await expect(page.getByTestId("onboarding-city")).toBeEnabled();
-      await page.getByTestId("onboarding-city").selectOption("台中市");
+      await page.getByTestId("onboarding-city").selectOption("臺中市");
       await page.getByTestId("onboarding-latitude").fill("24.147736");
       await page.getByTestId("onboarding-longitude").fill("120.673648");
 
@@ -3168,7 +3168,7 @@ test.describe("Real system workflows", () => {
       await page.locator("#new-password").fill(password);
       await page.locator("#confirm-password").fill(password);
       await page
-        .getByRole("button", { name: /重設密碼|Reset Password/i })
+        .getByRole("button", { name: /設定密碼|Set password/i })
         .click();
       await expect(page).toHaveURL(/\/login$/);
 

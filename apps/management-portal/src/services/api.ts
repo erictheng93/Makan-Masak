@@ -12,6 +12,7 @@ import type {
   DeploymentLog,
   DeploymentStatus,
   HealthCheck,
+  HealthStatus,
   License,
   ApiResponse,
   PaginatedResponse,
@@ -309,11 +310,23 @@ export const deploymentsApi = {
 /**
  * 健康檢查 API
  */
+/** Shape of GET /health/tenants (apps/management-api/src/routes/health.ts). */
+export interface TenantsHealthPayload {
+  tenants: Array<{
+    tenantId: string;
+    health: {
+      status: HealthStatus;
+      responseTimeMs: number | null;
+      lastCheck: string | null;
+    };
+  }>;
+}
+
 export const healthApi = {
   // 獲取所有租戶健康狀態
-  async getAllStatus(): Promise<HealthCheck[]> {
+  async getAllStatus(): Promise<TenantsHealthPayload> {
     const { data } =
-      await apiClient.get<ApiResponse<HealthCheck[]>>("/health/tenants");
+      await apiClient.get<ApiResponse<TenantsHealthPayload>>("/health/tenants");
     return data.data!;
   },
 
