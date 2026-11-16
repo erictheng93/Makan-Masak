@@ -3168,7 +3168,7 @@ test.describe("Real system workflows", () => {
       await page.locator("#new-password").fill(password);
       await page.locator("#confirm-password").fill(password);
       await page
-        .getByRole("button", { name: /重設密碼|Reset Password/i })
+        .getByRole("button", { name: /設定密碼|Set password/i })
         .click();
       await expect(page).toHaveURL(/\/login$/);
 
