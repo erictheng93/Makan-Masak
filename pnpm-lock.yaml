@@ -112,7 +112,7 @@ overrides:
   incur>zod: ^4.6.7
   uuid: ^14.0.0
   '@grpc/grpc-js': ^1.14.5
-  '@hono/node-server': ^2.1.5
+  '@hono/node-server': ^2.1.6
   '@azure/identity>@azure/msal-node': ^7.1.2
   '@humanfs/node': ^0.16.8
   '@isaacs/brace-expansion': ^5.0.1
@@ -138,7 +138,7 @@ overrides:
   flatted: ^3.4.2
   follow-redirects: ^1.16.2
   form-data: ^4.0.6
-  hono: ^4.13.7
+  hono: ^4.13.16
   http-cache-semantics: 4.2.0
   joi: ^17.13.9
   js-yaml@^3: ^3.15.2
@@ -436,13 +436,13 @@ importers:
     dependencies:
       '@hono/swagger-ui':
         specifier: ^0.6.1
-        version: 0.6.1(hono@4.13.13)
+        version: 0.6.1(hono@4.13.18)
       '@hono/zod-openapi':
         specifier: ^1.6.3
-        version: 1.6.3(hono@4.13.13)(zod@4.6.7)
+        version: 1.6.3(hono@4.13.18)(zod@4.6.7)
       '@hono/zod-validator':
         specifier: ^0.9.1
-        version: 0.9.1(hono@4.13.13)(zod@4.6.7)
+        version: 0.9.1(hono@4.13.18)(zod@4.6.7)
       '@makanmasak/ai-analytics':
         specifier: workspace:*
         version: link:../../packages/ai-analytics
@@ -471,8 +471,8 @@ importers:
         specifier: ^0.8.3
         version: 0.8.3
       hono:
-        specifier: ^4.13.7
-        version: 4.13.13
+        specifier: ^4.13.16
+        version: 4.13.18
       jsonwebtoken:
         specifier: ^9.0.2
         version: 9.0.3
@@ -487,8 +487,8 @@ importers:
         specifier: ^5.20261006.1
         version: 5.20261006.1
       '@hono/node-server':
-        specifier: ^2.1.5
-        version: 2.1.5(hono@4.13.13)
+        specifier: ^2.1.6
+        version: 2.1.8(hono@4.13.18)
       '@types/bcryptjs':
         specifier: ^2.4.6
         version: 2.4.6
@@ -674,8 +674,8 @@ importers:
         specifier: 0.45.2
         version: 0.45.2(@cloudflare/workers-types@5.20261006.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@upstash/redis@1.36.1)(better-sqlite3@12.6.0)(sql.js@1.13.0)
       hono:
-        specifier: ^4.13.7
-        version: 4.13.13
+        specifier: ^4.13.16
+        version: 4.13.18
       uuid:
         specifier: ^14.0.0
         version: 14.0.2
@@ -806,7 +806,7 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: ^0.9.1
-        version: 0.9.1(hono@4.13.13)(zod@4.6.7)
+        version: 0.9.1(hono@4.13.18)(zod@4.6.7)
       '@makanmasak/utils':
         specifier: workspace:*
         version: link:../../packages/utils
@@ -817,8 +817,8 @@ importers:
         specifier: 0.45.2
         version: 0.45.2(@cloudflare/workers-types@5.20261006.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@upstash/redis@1.36.1)(better-sqlite3@12.6.0)(sql.js@1.13.0)
       hono:
-        specifier: ^4.13.7
-        version: 4.13.13
+        specifier: ^4.13.16
+        version: 4.13.18
       pinyin-pro:
         specifier: ^3.28.1
         version: 3.28.1
@@ -1088,8 +1088,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/utils
       hono:
-        specifier: ^4.13.7
-        version: 4.13.13
+        specifier: ^4.13.16
+        version: 4.13.18
       jsonwebtoken:
         specifier: ^9.0.2
         version: 9.0.3
@@ -2503,28 +2503,28 @@ packages:
     peerDependencies:
       vue: '>= 3'
 
-  '@hono/node-server@2.1.5':
-    resolution: {integrity: sha512-MgP/I06GdvsilDspMk/qmRzpk8LOUStP6jFAbSRi40W09DhoyUn+Mj7eyKICPqeYKybOjVFLVIAQzvu1bfIa7Q==}
+  '@hono/node-server@2.1.8':
+    resolution: {integrity: sha512-jdf7FHh6A1lzjpHHQUgxsg2GeER2vMetnAOfeActzcoli6jamlK+NAwL6Dsr5Fl3BS3tYUQzCdtZjU8Qxv7bEA==}
     engines: {node: '>=20'}
     peerDependencies:
-      hono: ^4.13.7
+      hono: ^4.13.16
 
   '@hono/swagger-ui@0.6.1':
     resolution: {integrity: sha512-sJTvldu1GPeEPfyeLG7gRj+W4vEuD+JDi+JjJ3TJs/DvMUtBLs0KJO5yokGegWWdy5qrbdnQGekbhgNRmPmYKQ==}
     peerDependencies:
-      hono: ^4.13.7
+      hono: ^4.13.16
 
   '@hono/zod-openapi@1.6.3':
     resolution: {integrity: sha512-VYR82Y60plu8g3pN60OUXMVKpmxh3R04Qs++3DY9vtwZ9/sA/BRY0PcRIR+Z37/3itWtM7pYwT9bKiH9JhqV6Q==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
-      hono: ^4.13.7
+      hono: ^4.13.16
       zod: ^4.0.0
 
   '@hono/zod-validator@0.9.1':
     resolution: {integrity: sha512-iiv6w0qrIc0arfvCtUqBWsvl4fXjzaTcQcCJTTtCnkawF9HHGE+KjEl0ox3gQJ6rKZEgE3mLExlQCF72M+mNuw==}
     peerDependencies:
-      hono: ^4.13.7
+      hono: ^4.13.16
       zod: ^3.25.0 || ^4.0.0
 
   '@humanfs/core@0.19.2':
@@ -5444,8 +5444,8 @@ packages:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
 
-  hono@4.13.13:
-    resolution: {integrity: sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA==}
+  hono@4.13.18:
+    resolution: {integrity: sha512-H9q/E1XizaWstJxUW881dmLxEj+t/TrGGnyxINkm4+sK0qUwsMtFdo2BWI9Vs3cIS19MU6b6iCijoUoEf4f3DA==}
     engines: {node: '>=16.9.0'}
 
   hot-shots@10.2.1:
@@ -9274,25 +9274,25 @@ snapshots:
     dependencies:
       vue: 3.5.42(typescript@6.0.3)
 
-  '@hono/node-server@2.1.5(hono@4.13.13)':
+  '@hono/node-server@2.1.8(hono@4.13.18)':
     dependencies:
-      hono: 4.13.13
+      hono: 4.13.18
 
-  '@hono/swagger-ui@0.6.1(hono@4.13.13)':
+  '@hono/swagger-ui@0.6.1(hono@4.13.18)':
     dependencies:
-      hono: 4.13.13
+      hono: 4.13.18
 
-  '@hono/zod-openapi@1.6.3(hono@4.13.13)(zod@4.6.7)':
+  '@hono/zod-openapi@1.6.3(hono@4.13.18)(zod@4.6.7)':
     dependencies:
       '@asteasolutions/zod-to-openapi': 9.1.0(zod@4.6.7)
-      '@hono/zod-validator': 0.9.1(hono@4.13.13)(zod@4.6.7)
-      hono: 4.13.13
+      '@hono/zod-validator': 0.9.1(hono@4.13.18)(zod@4.6.7)
+      hono: 4.13.18
       openapi3-ts: 4.5.0
       zod: 4.6.7
 
-  '@hono/zod-validator@0.9.1(hono@4.13.13)(zod@4.6.7)':
+  '@hono/zod-validator@0.9.1(hono@4.13.18)(zod@4.6.7)':
     dependencies:
-      hono: 4.13.13
+      hono: 4.13.18
       zod: 4.6.7
 
   '@humanfs/core@0.19.2':
@@ -12246,7 +12246,7 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
-  hono@4.13.13: {}
+  hono@4.13.18: {}
 
   hot-shots@10.2.1:
     optionalDependencies:
