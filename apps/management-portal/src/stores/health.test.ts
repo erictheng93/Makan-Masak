@@ -29,12 +29,27 @@ beforeEach(() => {
 
 describe("useHealthStore", () => {
   it("fetches all health checks and computes dashboard summary", async () => {
-    vi.mocked(healthApi.getAllStatus).mockResolvedValue([
-      check("tenant-1", "healthy", 100),
-      check("tenant-2", "degraded", 500),
-      check("tenant-3", "down", 1000),
-      check("tenant-4", "unknown"),
-    ]);
+    // Real GET /health/tenants shape: one row per tenant, latest check nested.
+    const row = (
+      tenantId: string,
+      status: HealthCheck["status"],
+      responseTimeMs: number | null,
+    ) => ({
+      tenantId,
+      health: {
+        status,
+        responseTimeMs,
+        lastCheck: responseTimeMs === null ? null : "2026-06-07T00:00:00Z",
+      },
+    });
+    vi.mocked(healthApi.getAllStatus).mockResolvedValue({
+      tenants: [
+        row("tenant-1", "healthy", 100),
+        row("tenant-2", "degraded", 500),
+        row("tenant-3", "down", 1000),
+        row("tenant-4", "unknown", null),
+      ],
+    });
     const store = useHealthStore();
 
     await store.fetchAllHealthChecks();
